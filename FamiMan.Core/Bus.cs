@@ -16,8 +16,21 @@ namespace FamiMan.Core
 
         public byte this[ushort index]
         {
-            get => Ram[(byte)index]; // TODO
-            set => Ram[(byte)index] = value;
+            get
+            {
+                // Ram = $0000 -$07FF
+                if (index >= 0 && index < 0x7FF)
+                    return Ram[index];
+                else
+                    throw new NotImplementedException("Not done");
+            }
+            set
+            {
+                if (index >= 0 && index < 0x7FF)
+                    Ram[index] = value;
+                else
+                    throw new NotImplementedException("Not done");
+            }
         }
     }
 }

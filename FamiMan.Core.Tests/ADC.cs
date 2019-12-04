@@ -26,7 +26,7 @@ namespace FamiMan.Core.Tests
         }
 
         [Fact]
-        public void ADC_0x69()
+        public void ADC_0x69_Immediate()
         {
             byte i = 0;
             _b.Ram[i++] = 0x69;     // Add
@@ -52,10 +52,75 @@ namespace FamiMan.Core.Tests
             _b.Ram[i++] = 0x10;     // And 16
             _c.Tick();
             _c.Tick();
+            Assert.Equal(0, _c.A);          // 0 in Acc
+            Assert.True(_c.P.Carry);        // 1 in carry
 
-            Assert.Equal(1, _c.A);      // 1 in A
-            Assert.True(_c.P.Carry);    // 1 in carry
+            // ______ OVERFLOW FLAG ________
+            // We moved from 0-128 <-> 129-255 range
+            Assert.True(_c.P.Overflow);    // 1 in overflow, 240 -> 1
 
+            _c.A = 1;                       // Reset
+            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = 0x80;             // Lets add 128
+            _c.Tick();
+            Assert.Equal(129, _c.A);        // 129 in A
+            Assert.True(_c.P.Overflow);     // 1 in overflow
+
+
+            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = 0x01;             // Lets add 1
+            _c.Tick();
+            Assert.Equal(130, _c.A);        // 129 in A
+            Assert.False(_c.P.Overflow);    // 0 in overflow
+
+            // ______ NEGATIVE FLAG _______
+            // Result is more than 127
+            Assert.True(_c.P.Negative);
+
+            _c.A = 1;                        // Reset
+            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = 0x01;              // Lets add 1
+            _c.Tick();
+            Assert.Equal(2, _c.A);           // 2 in A
+            Assert.False(_c.P.Negative);     // 0 in negative
+
+            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = 0x80;              // Lets add 128
+            _c.Tick();
+            Assert.Equal(130, _c.A);         // 130 in A, 2 + 128
+            Assert.True(_c.P.Negative);      // 1 in negative
+
+            // ________ ZERO FLAG _______
+            // Result is 0
+            Assert.False(_c.P.Zero);
+
+            _c.A = 0;                        // Reset
+            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = 0x00;              // Lets add 0
+            _c.Tick();
+            Assert.Equal(0, _c.A);           // 0 in A
+            Assert.True(_c.P.Zero);          // 1 in zero
+
+            _c.A = 1;                        // Reset
+            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = 0xFF;              // Lets add 255
+            _c.Tick();
+
+            Assert.Equal(0, _c.A);           // 0 in A
+            Assert.True(_c.P.Zero);          // 1 in zero
+        }
+
+        [Fact]
+        public void ADC_0x6D_Absolute()
+        {
+            byte i = 0;
+            _b.Ram[i++] = 0x6D;     // Add
+            _b.Ram[i++] = 0xE8;     // Memory location: 0x3E8/1000d
+            _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
+            _b[0x3E8]   = 0x02;     // 2 at memory location 0x3E8/1000d
+            _c.Tick();              // Tick
+            Assert.Equal(2, _c.A);  // Accumulator should be 2
+            Assert.Equal(3, _c.PC); // Program counter should have moved to 3
         }
     }
 }

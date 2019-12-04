@@ -20,10 +20,14 @@ namespace FamiMan.Core
 
         /// <summary>
         /// Status registers
-        /// </summary>
-        public StatusRegisters P = new StatusRegisters(); // 	N	V	B	D	I	Z	C
+        /// </summary>                                      //  0   1   2   3   4   5   6
+        public StatusRegisters P = new StatusRegisters();   // 	N	V	B	D	I	Z	C
 
+        private const byte NEGATIVE = 0;
+        private const byte OVERFLOW = 1;
+        private const byte Z = 5;
         private const byte CARRY = 6;
+
         private const byte ONE = 1;
         private const byte ZERO = 0;
 
@@ -40,37 +44,83 @@ namespace FamiMan.Core
             switch (instruction)
             {
                 case 0x69: // ADC #$44
-                    len = 2;
-                    ushort addr = PC; addr++;
-                    if (A + _bus[addr] > 255)
+                case 0x6D: // ADC $4400
+                    byte val = 0;
+                    ushort addr = 0;
+                    if (instruction == 0x69)
                     {
-                        A += (byte)(_bus[addr] - 255);
-                        P.Carry = true;
+                        len = 2; addr = PC; addr++;
+                        val = _bus[addr];
                     }
-                    else
+                    if (instruction == 0x6D)
                     {
-                        A += _bus[addr];
-                        A += P.Carry ? ONE : ZERO;
-                        P.Carry = false;
+                        addr = PC; addr++;
+                        addr = (ushort)(_bus[addr] + (_bus[(byte)(addr + 1)] << 8));
+                        val = _bus[addr];
+                        len = 3;
                     }
+
+                    ADC(addr, val);
+
                     break;
                 default:
                     break;
             }
 
-            // Parse opcode
-            // Execute operation
-
             return len;
+        }
+
+        private void ADC(ushort addr, byte val)
+        {
+            int temp = A;
+            A += P.Carry ? ONE : ZERO;
+            if (A + val > 255)
+            {
+                A += (byte)(_bus[addr] - 256);
+                P.Carry = true;
+            }
+            else
+            {
+                A += val;
+                P.Carry = false;
+            }
+
+            P.Overflow = !(temp >> 7 == A >> 7);
+            P.Negative = A >> 7 != 0;
+            P.Zero = A == 0;
         }
 
         public class StatusRegisters
         {
-            private bool[] _s = new bool[7];
+            private readonly bool[] _s = new bool[7];
+
+            public bool Negative
+            {
+                get => _s[NEGATIVE];
+                set => _s[NEGATIVE] = value;
+            }
+
             public bool Carry
             {
-                get => _s[CARRY];
+                get
+                {
+                    var ret = _s[CARRY];
+                    _s[CARRY] = false;
+                    return ret;
+                }
                 set => _s[CARRY] = value;
+            }
+
+            public bool Overflow
+            {
+                get => _s[OVERFLOW];
+                set => _s[OVERFLOW] = value;
+            }
+
+            public bool Zero
+            {
+                get => _s[Z];
+                set => _s[Z] = value;
             }
         }
     }
