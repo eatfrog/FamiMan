@@ -6,7 +6,7 @@ namespace FamiMan.Core
 {
     public class Ram
     {
-        public static byte[] _ram = new byte[2 * Constants.KB];
+        public byte[] _ram = new byte[2 * Constants.KB];
 
         public byte this[ushort index]
         {

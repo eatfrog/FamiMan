@@ -2,6 +2,9 @@
 
 namespace FamiMan.Core
 {
+    /// <summary>
+    /// The Ricoh 2A03 Cpu
+    /// </summary>
     public class Cpu : ICpu
     {
         public Cpu(Bus b)
@@ -13,10 +16,10 @@ namespace FamiMan.Core
         private Bus _bus;
 
         public ushort PC = new ushort();
-        public byte A = new byte();
-        public byte X = new byte();
-        public byte Y = new byte();
-        public byte S = new byte();
+        public byte A = new byte(); // Accumulator
+        public byte X = new byte(); // Gen purp reg X
+        public byte Y = new byte(); // Gen purp reg Y
+        public byte S = new byte(); // Stack pointer
 
         /// <summary>
         /// Status registers
@@ -40,28 +43,57 @@ namespace FamiMan.Core
         private byte ExecuteNextInstruction()
         {
             var instruction = _bus[PC];
-            byte len = 1;
+            byte len = 0;
+            ushort addr = PC; addr++;
+
             switch (instruction)
             {
-                case 0x69: // ADC #$44
-                case 0x6D: // ADC $4400
-                    byte val = 0;
-                    ushort addr = 0;
-                    if (instruction == 0x69)
-                    {
-                        len = 2; addr = PC; addr++;
-                        val = _bus[addr];
-                    }
+                case 0x69: // ADC #$44  - Immediate
+                case 0x6D: // ADC $4400 - Absolute
+                case 0x65: // ADC $44   - Zero page
+                    len = Constants.ADC.Length(instruction);
                     if (instruction == 0x6D)
-                    {
-                        addr = PC; addr++;
-                        addr = (ushort)(_bus[addr] + (_bus[(byte)(addr + 1)] << 8));
-                        val = _bus[addr];
-                        len = 3;
-                    }
+                        addr = GetAbsolute(addr);
+                    else if (instruction == 0x65)
+                        addr = _bus[addr];
 
+                    byte val = _bus[addr];
                     ADC(addr, val);
+                    break;
+                case 0x86: // STX $44       - ZP
+                case 0x84: // STY $44       - ZP
+                case 0x96: // STX $44, Y    - ZP + Y
+                case 0x94: // STY $44, X    - ZP + X
+                case 0x8E: // STX $4400     - Abs
+                case 0x8C: // STY $4400     - ABS
+                    len = Constants.STXSTY.Length(instruction);
+                    if (len == 2)
+                        addr = _bus[addr];
 
+                    if (instruction == 0x86) // ZP
+                        X = _bus[addr];
+                    else if (instruction == 0x84)
+                        Y = _bus[addr];
+                    else if (instruction == 0x96) // + Y
+                    { 
+                        addr += Y;
+                        X = _bus[addr];
+                    }
+                    else if (instruction == 0x94) // + X
+                    {
+                        addr += X;
+                        Y = _bus[addr];
+                    }
+                    else if (instruction == 0x8E) // Abs
+                    {
+                        addr = GetAbsolute(addr);
+                        X = _bus[addr];
+                    }
+                    else if (instruction == 0x8C) // Abs
+                    {
+                        addr = GetAbsolute(addr);
+                        Y = _bus[addr];
+                    }
                     break;
                 default:
                     break;
@@ -72,23 +104,21 @@ namespace FamiMan.Core
 
         private void ADC(ushort addr, byte val)
         {
-            int temp = A;
             A += P.Carry ? ONE : ZERO;
-            if (A + val > 255)
-            {
-                A += (byte)(_bus[addr] - 256);
-                P.Carry = true;
-            }
-            else
-            {
-                A += val;
-                P.Carry = false;
-            }
 
+            int temp = A;
+            if (A + val > 255)
+                A += (byte)(_bus[addr] - 256);
+            else
+                A += val;
+
+            P.Carry = A < val;
             P.Overflow = !(temp >> 7 == A >> 7);
             P.Negative = A >> 7 != 0;
             P.Zero = A == 0;
         }
+
+        private ushort GetAbsolute(ushort addr) => (ushort)(_bus[addr] + (_bus[(byte)(addr + 1)] << 8));
 
         public class StatusRegisters
         {
