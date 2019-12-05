@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Xunit;
+using static FamiMan.Core.Constants.AND;
 
 namespace FamiMan.Core.Tests
 {
@@ -30,13 +31,17 @@ namespace FamiMan.Core.Tests
         public void AND_0x29_Immediate()
         {
             byte i = 0;
-            _b.Ram[i++] = 0x29;     // AND
-            _b.Ram[i++] = 0x01;     // 1
-            _b.Ram[i++] = 0x69;     // Add again
-            _b.Ram[i++] = 0x02;     // 1
-            _c.Tick();              // Tick
+            _c.A = 0x05;
+            _b.Ram[i++] = IMMEDIATE;    // AND
+            _b.Ram[i++] = 0x0E;         // 14            
+            
+            _c.Ticks(Cycles[IMMEDIATE]);
 
-            Assert.True(false);
+            // 00000101 - 5
+            // 00001110 - 14
+            // ________ AND
+            // 00000100 - 4
+            Assert.Equal(4, _c.A);
         }
     }
 }

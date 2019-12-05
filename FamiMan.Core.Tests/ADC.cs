@@ -156,9 +156,24 @@ namespace FamiMan.Core.Tests
             _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
             _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
             _c.X = 1;
-            _b[0x03E9] = 0x02;      // 2 at memory location 0x3E9/1000d
+            _b[0x03E9] = 0x04;      // 4 at memory location 0x3E9/1001d
             _c.Tick();              // Tick
-            Assert.Equal(2, _c.A);  // Accumulator should be 2
+            Assert.Equal(4, _c.A);  // Accumulator should be 4
+            Assert.Equal(3, _c.PC); // Program counter should have moved to 3
+        }
+
+        [Fact]
+        public void ADC_0x79_AbsoluteY()
+        {
+            byte i = 0;
+            _b.Ram[i++] = 0x79;     // Add Absolute
+            _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
+            _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
+            _c.X = 5; 
+            _c.Y = 1;
+            _b[0x03E9] = 0x12;      // 18 at memory location 0x3E9/1001d
+            _c.Tick();              // Tick
+            Assert.Equal(18, _c.A); // Accumulator should be 18
             Assert.Equal(3, _c.PC); // Program counter should have moved to 3
         }
     }

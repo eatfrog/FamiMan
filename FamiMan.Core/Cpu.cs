@@ -1,4 +1,5 @@
 ﻿using System;
+using static FamiMan.Core.Constants;
 
 namespace FamiMan.Core
 {
@@ -56,20 +57,23 @@ namespace FamiMan.Core
             ushort addr = PC; addr++;
             switch (i)
             {
-                case 0x69: // ADC #$44  - Immediate
-                case 0x6D: // ADC $4400 - Absolute
-                case 0x65: // ADC $44   - Zero page
-                case 0x75: // ADC $44, X
-                case 0x7D: // ADC $4400, X
-                    len = Constants.ADC.Length[i];                    
-                    if (i == 0x6D || i == 0x7D)
+                case 0x69:              // ADC #$44  - Immediate
+                case 0x6D:              // ADC $4400 - Absolute
+                case 0x65:              // ADC $44   - Zero page
+                case 0x75:              // ADC $44, X
+                case ADC.ABSOLUTE_X:    // ADC $4400, X
+                case ADC.ABSOLUTE_Y:    // ADC $4400, Y
+                    len = ADC.Length[i];                    
+                    if (i == 0x6D || i == ADC.ABSOLUTE_X || i == ADC.ABSOLUTE_Y)
                         addr = GetAbsolute(addr);
                     else if (i == 0x65 || i == 0x75)
                         addr = _bus[addr];
-                    if (i == 0x75 || i == 0x7D) // ZP + X, ABS + X
+                    if (i == 0x75 || i == ADC.ABSOLUTE_X) // ZP + X, ABS + X
                         addr += X;
+                    if (i == ADC.ABSOLUTE_Y)
+                        addr += Y;
                     byte val = _bus[addr];
-                    ADC(addr, val);
+                    CalculateADC(addr, val);
                     break;
                 case 0x86: // STX $44       - ZP
                 case 0x84: // STY $44       - ZP
@@ -80,11 +84,11 @@ namespace FamiMan.Core
                     if (_nextCommandDoneAt > _ticks) return;
                     else if (_nextCommandDoneAt < _ticks)
                     {
-                        _nextCommandDoneAt = _ticks + Constants.STXSTY.Cycles[i];
+                        _nextCommandDoneAt = _ticks + STXSTY.Cycles[i];
                         return;
                     }
 
-                    len = Constants.STXSTY.Length[i];
+                    len = STXSTY.Length[i];
 
                     if (len == 2)
                         addr = _bus[addr];
@@ -117,7 +121,7 @@ namespace FamiMan.Core
             PC += len;
         }
 
-        private void ADC(ushort addr, byte val)
+        private void CalculateADC(ushort addr, byte val)
         {
             A += P.Carry ? ONE : ZERO;
 
