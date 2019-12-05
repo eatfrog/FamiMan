@@ -34,29 +34,40 @@ namespace FamiMan.Core
         private const byte ONE = 1;
         private const byte ZERO = 0;
 
+        private long _ticks = 0;
+        private long _nextCommandDoneAt = -1;
+
         public void Tick()
         {
-            byte length = ExecuteNextInstruction();
-            PC += length;
+            _ticks++;
+            ExecuteNextInstruction();
         }
 
-        private byte ExecuteNextInstruction()
+        public void Ticks(int num)
         {
-            var instruction = _bus[PC];
+            for (int i = 0; i <= num; i++)
+                Tick();
+        }
+
+        private void ExecuteNextInstruction()
+        {
+            var i = _bus[PC];
             byte len = 0;
             ushort addr = PC; addr++;
-
-            switch (instruction)
+            switch (i)
             {
                 case 0x69: // ADC #$44  - Immediate
                 case 0x6D: // ADC $4400 - Absolute
                 case 0x65: // ADC $44   - Zero page
-                    len = Constants.ADC.Length(instruction);
-                    if (instruction == 0x6D)
+                case 0x75: // ADC $44, X
+                case 0x7D: // ADC $4400, X
+                    len = Constants.ADC.Length[i];                    
+                    if (i == 0x6D || i == 0x7D)
                         addr = GetAbsolute(addr);
-                    else if (instruction == 0x65)
+                    else if (i == 0x65 || i == 0x75)
                         addr = _bus[addr];
-
+                    if (i == 0x75 || i == 0x7D) // ZP + X, ABS + X
+                        addr += X;
                     byte val = _bus[addr];
                     ADC(addr, val);
                     break;
@@ -66,40 +77,44 @@ namespace FamiMan.Core
                 case 0x94: // STY $44, X    - ZP + X
                 case 0x8E: // STX $4400     - Abs
                 case 0x8C: // STY $4400     - ABS
-                    len = Constants.STXSTY.Length(instruction);
+                    if (_nextCommandDoneAt > _ticks) return;
+                    else if (_nextCommandDoneAt < _ticks)
+                    {
+                        _nextCommandDoneAt = _ticks + Constants.STXSTY.Cycles[i];
+                        return;
+                    }
+
+                    len = Constants.STXSTY.Length[i];
+
                     if (len == 2)
                         addr = _bus[addr];
+                    else
+                        addr = GetAbsolute(addr);
 
-                    if (instruction == 0x86) // ZP
+                    if (i == 0x86) // ZP
                         X = _bus[addr];
-                    else if (instruction == 0x84)
+                    else if (i == 0x84)
                         Y = _bus[addr];
-                    else if (instruction == 0x96) // + Y
+                    else if (i == 0x96) // + Y
                     { 
                         addr += Y;
                         X = _bus[addr];
                     }
-                    else if (instruction == 0x94) // + X
+                    else if (i == 0x94) // + X
                     {
                         addr += X;
                         Y = _bus[addr];
                     }
-                    else if (instruction == 0x8E) // Abs
-                    {
-                        addr = GetAbsolute(addr);
+                    else if (i == 0x8E)
                         X = _bus[addr];
-                    }
-                    else if (instruction == 0x8C) // Abs
-                    {
-                        addr = GetAbsolute(addr);
+                    else if (i == 0x8C)
                         Y = _bus[addr];
-                    }
+
                     break;
                 default:
                     break;
             }
-
-            return len;
+            PC += len;
         }
 
         private void ADC(ushort addr, byte val)

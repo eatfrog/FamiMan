@@ -134,5 +134,32 @@ namespace FamiMan.Core.Tests
             Assert.Equal(2, _c.A);  // Accumulator should be 2
             Assert.Equal(2, _c.PC); // Program counter should have moved to 3
         }
+
+        [Fact]
+        public void ADC_0x75_ZeroPageX()
+        {
+            byte i = 0;
+            _b.Ram[i++] = 0x75;     // Add Zero page
+            _b.Ram[i++] = 0xE8;     // Memory location: 0x00E8/232d
+            _c.X = 1;
+            _b[0x00E9] = 0x02;      // 2 at memory location 0x00E9
+            _c.Tick();              // Tick
+            Assert.Equal(2, _c.A);  // Accumulator should be 2
+            Assert.Equal(2, _c.PC); // Program counter should have moved to 3
+        }
+
+        [Fact]
+        public void ADC_0x7D_AbsoluteX()
+        {
+            byte i = 0;
+            _b.Ram[i++] = 0x7D;     // Add Absolute
+            _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
+            _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
+            _c.X = 1;
+            _b[0x03E9] = 0x02;      // 2 at memory location 0x3E9/1000d
+            _c.Tick();              // Tick
+            Assert.Equal(2, _c.A);  // Accumulator should be 2
+            Assert.Equal(3, _c.PC); // Program counter should have moved to 3
+        }
     }
 }

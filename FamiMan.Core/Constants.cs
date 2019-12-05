@@ -10,43 +10,40 @@ namespace FamiMan.Core
 
         public static class STXSTY
         {
-            public static byte Length(byte instruction)
+            public static readonly Dictionary<byte, byte> Length = new Dictionary<byte, byte>()
             {
+                { 0x86, 2 },
+                { 0x96, 2 },
+                { 0x84, 2 },
+                { 0x94, 2 },
+                { 0x8E, 3 },
+                { 0x8C, 3 },
+            };
 
-                if (instruction == 0x86 || // STX
-                    instruction == 0x96 ||
-                    instruction == 0x84 || // STY
-                    instruction == 0x94)
-                    return 2;
-
-                if (instruction == 0x8E || // STX
-                    instruction == 0x8C)   // STY
-                    return 3;
-
-                throw new NotImplementedException("Got instruction: " + instruction);
-            }
-
+            public static readonly Dictionary<byte, byte> Cycles = new Dictionary<byte, byte>()
+            {
+                { 0x86, 3 },
+                { 0x96, 4 },
+                { 0x8E, 4 },
+                { 0x84, 3 },
+                { 0x94, 4 },
+                { 0x8C, 4 },
+            };
         }
 
         public static class ADC
         {
-            public static byte Length(byte instruction)
+            public static readonly Dictionary<byte, byte> Length = new Dictionary<byte, byte>()
             {
-
-                if (instruction == 0x69 ||
-                    instruction == 0x65 ||
-                    instruction == 0x75 ||
-                    instruction == 0x61 ||
-                    instruction == 0x71)
-                    return 2;
-
-                if (instruction == 0x6D ||
-                    instruction == 0x7D ||
-                    instruction == 0x79)
-                    return 3;
-
-                throw new NotImplementedException("Got instruction: " + instruction);
-            }
+                { 0x69, 2 },
+                { 0x65, 2 },
+                { 0x75, 2 },
+                { 0x61, 2 },
+                { 0x71, 2 },
+                { 0x6D, 3 },
+                { 0x7D, 3 },
+                { 0x79, 3 },
+            };
         }
 
     }
