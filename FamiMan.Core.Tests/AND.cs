@@ -28,14 +28,15 @@ namespace FamiMan.Core.Tests
         }
 
         [Fact]
-        public void AND_0x29_Immediate()
+        public void AND_0x29_Immediate() // TODO: implementation missing in cpu
         {
             byte i = 0;
             _c.A = 0x05;
             _b.Ram[i++] = IMMEDIATE;    // AND
             _b.Ram[i++] = 0x0E;         // 14            
-            
-            _c.Ticks(Cycles[IMMEDIATE]);
+
+            //_c.Ticks(Cycles[IMMEDIATE]);
+            _c.Tick();
 
             // 00000101 - 5
             // 00001110 - 14

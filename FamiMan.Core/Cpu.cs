@@ -36,7 +36,6 @@ namespace FamiMan.Core
         private const byte ZERO = 0;
 
         private long _ticks = 0;
-        private long _nextCommandDoneAt = -1;
 
         public void Tick()
         {
@@ -81,13 +80,7 @@ namespace FamiMan.Core
                 case 0x94: // STY $44, X    - ZP + X
                 case 0x8E: // STX $4400     - Abs
                 case 0x8C: // STY $4400     - ABS
-                    if (_nextCommandDoneAt > _ticks) return;
-                    else if (_nextCommandDoneAt < _ticks)
-                    {
-                        _nextCommandDoneAt = _ticks + STXSTY.Cycles[i];
-                        return;
-                    }
-
+                    _ticks += STXSTY.Cycles[i];
                     len = STXSTY.Length[i];
 
                     if (len == 2)
@@ -113,11 +106,11 @@ namespace FamiMan.Core
                         X = _bus[addr];
                     else if (i == 0x8C)
                         Y = _bus[addr];
-
                     break;
                 default:
                     break;
             }
+
             PC += len;
         }
 
