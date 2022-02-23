@@ -66,17 +66,23 @@ namespace FamiMan.Core
                 case Opcodes.ADC.Immediate.Opcode:  // ADC #$44  - Immediate
                 case Opcodes.ADC.Absolute.Opcode:   // ADC $4400 - Absolute
                 case Opcodes.ADC.ZeroPage.Opcode:   // ADC $44   - Zero page
-                case 0x75:              // ADC $44, X
-                case ADC.ABSOLUTE_X:    // ADC $4400, X
-                case ADC.ABSOLUTE_Y:    // ADC $4400, Y
-                    len = ADC.Length[i];                    
-                    if (i == 0x6D || i == ADC.ABSOLUTE_X || i == ADC.ABSOLUTE_Y)
+                case Opcodes.ADC.ZeroPage_X.Opcode: // ADC $44, X
+                case Opcodes.ADC.Absolute_X.Opcode: // ADC $4400, X
+                case Opcodes.ADC.Absolute_Y.Opcode: // ADC $4400, Y
+                case Opcodes.ADC.Indirect_X.Opcode: // ADC($F6, X) - $F6 + X
+                    len = Opcodes.ADC.Lengths[i];
+                    if (i == Opcodes.ADC.Absolute.Opcode || i == Opcodes.ADC.Absolute_X.Opcode || i == Opcodes.ADC.Absolute_Y.Opcode)
                         addr = GetAbsolute(addr);
-                    else if (i == 0x65 || i == 0x75)
+                    else if (i == Opcodes.ADC.ZeroPage.Opcode || i == Opcodes.ADC.ZeroPage_X.Opcode)
                         addr = _bus[addr];
-                    if (i == 0x75 || i == ADC.ABSOLUTE_X) // ZP + X, ABS + X
+                    else if (i == Opcodes.ADC.Indirect_X.Opcode)
+                    {
+                        ushort ptr = (ushort)(_bus[addr] + X);
+                        addr = GetAbsolute(ptr);
+                    }
+                    if (i == Opcodes.ADC.ZeroPage_X.Opcode || i == Opcodes.ADC.Absolute_X.Opcode) // ZP + X, ABS + X
                         addr += X;
-                    if (i == ADC.ABSOLUTE_Y)
+                    if (i == Opcodes.ADC.Absolute_Y.Opcode)
                         addr += Y;
                     byte val = _bus[addr];
                     CalculateADC(addr, val);

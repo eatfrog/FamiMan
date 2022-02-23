@@ -6,12 +6,20 @@ namespace FamiMan.Core
 {
     public class Ram
     {
-        public byte[] _ram = new byte[2 * Constants.KB];
+        public byte[] _ram;
+
+        public Ram(int size)
+        {
+            _ram = new byte[size];
+        }
+        
 
         public byte this[ushort index]
         {
             get => _ram[index];
             set => _ram[index] = value;
         }
+
+        public Span<byte> AsSpan() => _ram;
     }
 }

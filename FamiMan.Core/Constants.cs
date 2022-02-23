@@ -30,27 +30,5 @@ namespace FamiMan.Core
                 { 0x8C, 4 },
             };
         }
-
-        public static class ADC
-        {
-            public static readonly Dictionary<byte, byte> Length = new Dictionary<byte, byte>()
-            {
-                { 0x69, 2 },
-                { 0x65, 2 },
-                { 0x75, 2 },
-                { 0x61, 2 },
-                { 0x71, 2 },
-                { 0x6D, 3 },
-                { ABSOLUTE_X, 3 },
-                { ABSOLUTE_Y, 3 },
-            };
-
-            public static readonly Dictionary<byte, byte> Cycles = new Dictionary<byte, byte>()
-            {
-                { ABSOLUTE_Y, 4 },
-            };
-
-            public const byte ABSOLUTE_Y = 0x79, ABSOLUTE_X = 0x7D;
-        }
     }
 }
