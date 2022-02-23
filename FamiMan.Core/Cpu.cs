@@ -43,6 +43,12 @@ namespace FamiMan.Core
             ExecuteNextInstruction();
         }
 
+        public void Tick(int ticks)
+        {
+            for (int i = 0; i < ticks; i++)
+                Tick();
+        }
+
         public void Ticks(int num)
         {
             for (int i = 0; i <= num; i++)
@@ -51,14 +57,15 @@ namespace FamiMan.Core
 
         private void ExecuteNextInstruction()
         {
+            // TODO: take into consideration the cycles needed for a particular opcode
             var i = _bus[PC];
             byte len = 0;
             ushort addr = PC; addr++;
             switch (i)
             {
                 case Opcodes.ADC.Immediate.Opcode:  // ADC #$44  - Immediate
-                case 0x6D:              // ADC $4400 - Absolute
-                case 0x65:              // ADC $44   - Zero page
+                case Opcodes.ADC.Absolute.Opcode:   // ADC $4400 - Absolute
+                case Opcodes.ADC.ZeroPage.Opcode:   // ADC $44   - Zero page
                 case 0x75:              // ADC $44, X
                 case ADC.ABSOLUTE_X:    // ADC $4400, X
                 case ADC.ABSOLUTE_Y:    // ADC $4400, Y

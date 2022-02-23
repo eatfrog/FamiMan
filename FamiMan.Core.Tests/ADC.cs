@@ -46,9 +46,9 @@ namespace FamiMan.Core.Tests
             Assert.Equal(5, _c.A);                          // From 3 to 5
 
             _c.A = 0;                                       // Reset
-            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0xF0;                             // Lets add 240
-            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x10;                             // And 16
             _c.Tick();
             _c.Tick();
@@ -114,11 +114,11 @@ namespace FamiMan.Core.Tests
         public void ADC_0x6D_Absolute()
         {
             byte i = 0;
-            _b.Ram[i++] = 0x6D;     // Add Absolute
+            _b.Ram[i++] = Opcodes.ADC.Absolute.Opcode;     // Add Absolute
             _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
             _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
             _b[0x03E8]  = 0x02;     // 2 at memory location 0x3E8/1000d
-            _c.Tick();              // Tick
+            _c.Tick(Opcodes.ADC.Absolute.Cycles);              // Tick
             Assert.Equal(2, _c.A);  // Accumulator should be 2
             Assert.Equal(3, _c.PC); // Program counter should have moved to 3
         }
@@ -127,10 +127,10 @@ namespace FamiMan.Core.Tests
         public void ADC_0x65_ZeroPage()
         {
             byte i = 0;
-            _b.Ram[i++] = 0x65;     // Add Zero page
+            _b.Ram[i++] = Opcodes.ADC.ZeroPage.Opcode;     // Add Zero page
             _b.Ram[i++] = 0xE8;     // Memory location: 0x00E8/232d
             _b[0x00E8]  = 0x02;     // 2 at memory location 0x00E8/232d
-            _c.Tick();              // Tick
+            _c.Tick(Opcodes.ADC.ZeroPage.Cycles);              // Tick
             Assert.Equal(2, _c.A);  // Accumulator should be 2
             Assert.Equal(2, _c.PC); // Program counter should have moved to 3
         }

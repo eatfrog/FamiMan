@@ -1,11 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29503.13
+# Visual Studio Version 17
+VisualStudioVersion = 17.1.32210.238
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FamiMan.Core", "FamiMan.Core\FamiMan.Core.csproj", "{E93948E6-5CB4-46F0-A17C-578136637B5A}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FamiMan.Core", "FamiMan.Core\FamiMan.Core.csproj", "{E93948E6-5CB4-46F0-A17C-578136637B5A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FamiMan.Core.Tests", "FamiMan.Core.Tests\FamiMan.Core.Tests.csproj", "{1712C38B-D625-4793-95C8-4C25F3F7C026}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FamiMan.Core.Tests", "FamiMan.Core.Tests\FamiMan.Core.Tests.csproj", "{1712C38B-D625-4793-95C8-4C25F3F7C026}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FamiMan.GUI", "FamiMan.GUI\FamiMan.GUI.csproj", "{87D3B5A1-BABD-47EE-972F-1598B1E9C3EE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{1712C38B-D625-4793-95C8-4C25F3F7C026}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1712C38B-D625-4793-95C8-4C25F3F7C026}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1712C38B-D625-4793-95C8-4C25F3F7C026}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87D3B5A1-BABD-47EE-972F-1598B1E9C3EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87D3B5A1-BABD-47EE-972F-1598B1E9C3EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87D3B5A1-BABD-47EE-972F-1598B1E9C3EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87D3B5A1-BABD-47EE-972F-1598B1E9C3EE}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

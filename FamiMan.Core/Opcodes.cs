@@ -11,9 +11,33 @@ namespace FamiMan.Core
         {
             public static class Immediate
             {
-                public const int    Cycles  = 2;
-                public const int    Length  = 2;
-                public const byte   Opcode  = 0x69;
+                public const int Cycles = 2;
+                public const int Length = 2;
+                public const byte Opcode = 0x69;
+            }
+
+            public static class Absolute
+            {
+                public const int Cycles = 4;
+                public const int Length = 3;
+                public const byte Opcode = 0x6D;
+            }
+
+            public static class ZeroPage
+            {
+                public const int Cycles = 3;
+                public const int Length = 2;
+                public const byte Opcode = 0x65;
+            }
+        }
+
+        public static class AND
+        {
+            public static class Immediate
+            {
+                public const int Cycles = 2;
+                public const int Length = 2;
+                public const byte Opcode = 0x29;
             }
         }
     }

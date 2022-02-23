@@ -52,18 +52,5 @@ namespace FamiMan.Core
 
             public const byte ABSOLUTE_Y = 0x79, ABSOLUTE_X = 0x7D;
         }
-
-        public static class AND
-        {
-            public static readonly Dictionary<byte, byte> Cycles = new Dictionary<byte, byte>()
-            {
-                {  IMMEDIATE, 2 }
-            };
-            
-            public const byte IMMEDIATE = 0x29, ZERO_PAGE = 0x25;
-
-
-        }
-
     }
 }
