@@ -56,7 +56,7 @@ namespace FamiMan.Core
             ushort addr = PC; addr++;
             switch (i)
             {
-                case 0x69:              // ADC #$44  - Immediate
+                case Opcodes.ADC.Immediate.Opcode:  // ADC #$44  - Immediate
                 case 0x6D:              // ADC $4400 - Absolute
                 case 0x65:              // ADC $44   - Zero page
                 case 0x75:              // ADC $44, X

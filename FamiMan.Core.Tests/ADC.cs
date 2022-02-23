@@ -29,27 +29,27 @@ namespace FamiMan.Core.Tests
         public void ADC_0x69_Immediate()
         {
             byte i = 0;
-            _b.Ram[i++] = 0x69;     // Add
-            _b.Ram[i++] = 0x01;     // 1
-            _b.Ram[i++] = 0x69;     // Add again
-            _b.Ram[i++] = 0x02;     // 1
-            _c.Tick();              // Tick
-            Assert.Equal(1, _c.A);  // Accumulator should be 1
-            Assert.Equal(2, _c.PC); // Program counter should have moved to 2
-            _c.Tick();              // Another cpu tick
-            Assert.Equal(3, _c.A);  // Accumulator should have 2 more now
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;     // Add
+            _b.Ram[i++] = 0x01;                             // 1
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;     // Add again
+            _b.Ram[i++] = 0x02;                             // 2
+            _c.Tick();                                      // Tick
+            Assert.Equal(1, _c.A);                          // Accumulator should be 1
+            Assert.Equal(2, _c.PC);                         // Program counter should have moved to 2
+            _c.Tick();                                      // Another cpu tick
+            Assert.Equal(3, _c.A);                          // Accumulator should have 2 more now = 3
 
-            _c.P.Carry = true;      // If carry flag is set we want to add one more
+            _c.P.Carry = true;                              // If carry flag is set we want to add one more
             _b.Ram[i++] = 0x69;
-            _b.Ram[i++] = 0x01;     // So value is 1, we expect 2 more
+            _b.Ram[i++] = 0x01;                             // So value is 1, we expect 2 more
             _c.Tick();
-            Assert.Equal(5, _c.A);  // From 3 to 5
+            Assert.Equal(5, _c.A);                          // From 3 to 5
 
-            _c.A = 0;               // Reset
+            _c.A = 0;                                       // Reset
             _b.Ram[i++] = 0x69;
-            _b.Ram[i++] = 0xF0;     // Lets add 240
+            _b.Ram[i++] = 0xF0;                             // Lets add 240
             _b.Ram[i++] = 0x69;
-            _b.Ram[i++] = 0x10;     // And 16
+            _b.Ram[i++] = 0x10;                             // And 16
             _c.Tick();
             _c.Tick();
             Assert.Equal(0, _c.A);          // 0 in Acc
@@ -60,14 +60,14 @@ namespace FamiMan.Core.Tests
             Assert.True(_c.P.Overflow);    // 1 in overflow, 240 -> 1
 
             _c.A = 1;                       // Reset
-            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x80;             // Lets add 128
             _c.Tick();
             Assert.Equal(129, _c.A);        // 129 in A
             Assert.True(_c.P.Overflow);     // 1 in overflow
 
 
-            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x01;             // Lets add 1
             _c.Tick();
             Assert.Equal(130, _c.A);        // 129 in A
@@ -78,13 +78,13 @@ namespace FamiMan.Core.Tests
             Assert.True(_c.P.Negative);
 
             _c.A = 1;                        // Reset
-            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x01;              // Lets add 1
             _c.Tick();
             Assert.Equal(2, _c.A);           // 2 in A
             Assert.False(_c.P.Negative);     // 0 in negative
 
-            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x80;              // Lets add 128
             _c.Tick();
             Assert.Equal(130, _c.A);         // 130 in A, 2 + 128
@@ -95,14 +95,14 @@ namespace FamiMan.Core.Tests
             Assert.False(_c.P.Zero);
 
             _c.A = 0;                        // Reset
-            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x00;              // Lets add 0
             _c.Tick();
             Assert.Equal(0, _c.A);           // 0 in A
             Assert.True(_c.P.Zero);          // 1 in zero
 
             _c.A = 1;                        // Reset
-            _b.Ram[i++] = 0x69;
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0xFF;              // Lets add 255
             _c.Tick();
 
