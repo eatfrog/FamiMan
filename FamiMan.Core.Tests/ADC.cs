@@ -192,5 +192,20 @@ namespace FamiMan.Core.Tests
             Assert.Equal(0xff, _c.A);                         // Accumulator should be ff
             Assert.Equal(Opcodes.ADC.Indirect_X.Length, _c.PC); // Program counter should have moved to correct value
         }
+
+        [Fact]
+        public void ADC_0x71_IndirectY()
+        {
+            _c.A = 2;
+            byte i = 0;
+            _b.Ram[i++] = Opcodes.ADC.Indirect_Y.Opcode;    // Add Indirect_X
+            _b.Ram[i++] = 0xE8;                             // Memory location: ZP 0x00E8/232d
+            _b[0xE8] = 0x03;                                // Ptr at memory location 0x00EA/232d points to 0x03
+            _c.Y = 2;                                       // + 2 so 0x05
+            _b[0x05] = 0xea;                                // which has value ea
+            _c.Tick(Opcodes.ADC.Indirect_Y.Cycles);         // Tick
+            Assert.Equal(0xea + 2, _c.A);                         // Accumulator should be ec
+            Assert.Equal(Opcodes.ADC.Indirect_Y.Length, _c.PC); // Program counter should have moved to correct value
+        }
     }
 }

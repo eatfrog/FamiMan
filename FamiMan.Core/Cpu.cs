@@ -69,16 +69,20 @@ namespace FamiMan.Core
                 case Opcodes.ADC.ZeroPage_X.Opcode: // ADC $44, X
                 case Opcodes.ADC.Absolute_X.Opcode: // ADC $4400, X
                 case Opcodes.ADC.Absolute_Y.Opcode: // ADC $4400, Y
-                case Opcodes.ADC.Indirect_X.Opcode: // ADC($F6, X) - $F6 + X
+                case Opcodes.ADC.Indirect_X.Opcode: // ADC($F6, X) - $F6 + X = ptr
+                case Opcodes.ADC.Indirect_Y.Opcode: // ADC ($44),Y - $F6 = ptr + Y
                     len = Opcodes.ADC.Lengths[i];
                     if (i == Opcodes.ADC.Absolute.Opcode || i == Opcodes.ADC.Absolute_X.Opcode || i == Opcodes.ADC.Absolute_Y.Opcode)
-                        addr = GetAbsolute(addr);
+                        addr = Get16bitAbsolute(addr);
                     else if (i == Opcodes.ADC.ZeroPage.Opcode || i == Opcodes.ADC.ZeroPage_X.Opcode)
                         addr = _bus[addr];
                     else if (i == Opcodes.ADC.Indirect_X.Opcode)
                     {
-                        ushort ptr = (ushort)(_bus[addr] + X);
-                        addr = GetAbsolute(ptr);
+                        addr = Get16bitAbsolute((ushort)(_bus[addr] + X));
+                    }
+                    else if (i == Opcodes.ADC.Indirect_Y.Opcode)
+                    {
+                        addr = (ushort)(Get16bitAbsolute(_bus[addr]) + Y);
                     }
                     if (i == Opcodes.ADC.ZeroPage_X.Opcode || i == Opcodes.ADC.Absolute_X.Opcode) // ZP + X, ABS + X
                         addr += X;
@@ -99,7 +103,7 @@ namespace FamiMan.Core
                     if (len == 2)
                         addr = _bus[addr];
                     else
-                        addr = GetAbsolute(addr);
+                        addr = Get16bitAbsolute(addr);
 
                     if (i == 0x86) // ZP
                         X = _bus[addr];
@@ -143,7 +147,7 @@ namespace FamiMan.Core
             P.Zero = A == 0;
         }
 
-        private ushort GetAbsolute(ushort addr) => (ushort)(_bus[addr] + (_bus[(byte)(addr + 1)] << 8));
+        private ushort Get16bitAbsolute(ushort addr) => (ushort)(_bus[addr] + (_bus[(byte)(addr + 1)] << 8));
 
         public class StatusRegisters
         {
