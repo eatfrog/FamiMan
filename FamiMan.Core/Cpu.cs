@@ -1,5 +1,4 @@
 ﻿using System;
-using static FamiMan.Core.Constants;
 
 namespace FamiMan.Core
 {
@@ -135,10 +134,39 @@ namespace FamiMan.Core
                     P.Negative = A >> 7 != 0;
                     break;
                 case Opcodes.ASL.Absolute.Opcode:
+                case Opcodes.ASL.Absolute_X.Opcode:
+                case Opcodes.ASL.ZeroPage.Opcode:
+                case Opcodes.ASL.ZeroPage_X.Opcode:
+                case Opcodes.ASL.Accumulator.Opcode:
                     len = Opcodes.ASL.Lengths[i];
                     addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
-                    var temp = _bus[addr] << 1;
-                    SetAccumulatorAndRegisters(temp);
+
+                    if (i == Opcodes.ASL.ZeroPage_X.Opcode || i == Opcodes.ASL.Absolute_X.Opcode) addr += X;
+
+                    if (i != Opcodes.ASL.Accumulator.Opcode)
+                        SetAccumulatorAndRegisters(_bus[addr] << 1);
+                    else
+                        SetAccumulatorAndRegisters(A << 1);
+
+                    break;
+                case Opcodes.LSR.Absolute.Opcode:
+                case Opcodes.LSR.Absolute_X.Opcode:
+                case Opcodes.LSR.ZeroPage.Opcode:
+                case Opcodes.LSR.ZeroPage_X.Opcode:
+                case Opcodes.LSR.Accumulator.Opcode:
+                    len = Opcodes.LSR.Lengths[i];
+                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
+
+                    if (i == Opcodes.LSR.ZeroPage_X.Opcode || i == Opcodes.LSR.Absolute_X.Opcode) addr += X;
+
+                    int lsb = A & ~(A - 1);
+                    if (i != Opcodes.LSR.Accumulator.Opcode)
+                        SetAccumulatorAndRegisters(_bus[addr] >> 1);
+                    else
+                        SetAccumulatorAndRegisters(A >> 1);
+
+                    P.Carry = lsb == 1;
+
                     break;
                 default:
                     throw new NotImplementedException("Opcode not implemented");
