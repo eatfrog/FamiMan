@@ -20,5 +20,10 @@ namespace FamiMan.Core
         {
             return (int)t.GetField("Cycles").GetValue(t);
         }
+
+        public static MemoryMappingMode GetMemoryMappingMode(this Type t)
+        {
+            return (MemoryMappingMode)t.GetField("Mode").GetValue(t);
+        }
     }
 }

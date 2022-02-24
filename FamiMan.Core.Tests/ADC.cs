@@ -183,15 +183,15 @@ namespace FamiMan.Core.Tests
         {
             _c.A = 2;
             byte i = 0;
-            _b.Ram[i++] = Opcodes.ADC.Indirect_X.Opcode;    // Add Indirect_X
+            _b.Ram[i++] = Opcodes.ADC.IndexedIndirect.Opcode;    // Add Indirect_X
             _b.Ram[i++] = 0xE8;                             // Memory location: ZP 0x00E8/232d
             _c.X = 2;                                       // + 2 so 0x00EA
             _b[0xEA] = 0x03;                                // Ptr at memory location 0x00EA/234d points to 
             _b[0xEA + 1] = 0x07;                            // 0x0703
             _b[0x0703] = 0xfd;                              // which has value fd
-            _c.Tick(Opcodes.ADC.Indirect_X.Cycles);         // Tick
-            Assert.Equal(0xff, _c.A);                         // Accumulator should be ff
-            Assert.Equal(Opcodes.ADC.Indirect_X.Length, _c.PC); // Program counter should have moved to correct value
+            _c.Tick(Opcodes.ADC.IndexedIndirect.Cycles);    // Tick
+            Assert.Equal(0xff, _c.A);                       // Accumulator should be ff
+            Assert.Equal(Opcodes.ADC.IndexedIndirect.Length, _c.PC); // Program counter should have moved to correct value
         }
 
         [Fact]
@@ -199,14 +199,14 @@ namespace FamiMan.Core.Tests
         {
             _c.A = 2;
             byte i = 0;
-            _b.Ram[i++] = Opcodes.ADC.Indirect_Y.Opcode;    // Add Indirect_X
+            _b.Ram[i++] = Opcodes.ADC.IndirectIndexed.Opcode;    // Add Indirect_Y
             _b.Ram[i++] = 0xE8;                             // Memory location: ZP 0x00E8/232d
             _b[0xE8] = 0x03;                                // Ptr at memory location 0x00EA/232d points to 0x03
             _c.Y = 2;                                       // + 2 so 0x05
             _b[0x05] = 0xea;                                // which has value ea
-            _c.Tick(Opcodes.ADC.Indirect_Y.Cycles);         // Tick
+            _c.Tick(Opcodes.ADC.IndirectIndexed.Cycles);         // Tick
             Assert.Equal(0xea + 2, _c.A);                         // Accumulator should be ec
-            Assert.Equal(Opcodes.ADC.Indirect_Y.Length, _c.PC); // Program counter should have moved to correct value
+            Assert.Equal(Opcodes.ADC.IndirectIndexed.Length, _c.PC); // Program counter should have moved to correct value
         }
     }
 }

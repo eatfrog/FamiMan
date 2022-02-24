@@ -48,14 +48,14 @@ namespace FamiMan.Core
                 public const int Cycles = 4;
             }
 
-            public static class Indirect_X
+            public static class IndexedIndirect
             {
                 public const byte Opcode = 0x61;
                 public const int Length = 2;
                 public const int Cycles = 6;
             }
 
-            public static class Indirect_Y
+            public static class IndirectIndexed
             {
                 public const byte Opcode = 0x71;
                 public const int Length = 2;
@@ -69,8 +69,8 @@ namespace FamiMan.Core
                 { Absolute.Opcode, Absolute.Length },
                 { Absolute_X.Opcode, Absolute_X.Length },
                 { Absolute_Y.Opcode, Absolute_Y.Length },
-                { Indirect_X.Opcode, Indirect_X.Length },
-                { Indirect_Y.Opcode, Indirect_Y.Length },
+                { IndexedIndirect.Opcode, IndexedIndirect.Length },
+                { IndirectIndexed.Opcode, IndirectIndexed.Length },
             };
 
             public static Dictionary<int, byte> Cycles = new Dictionary<int, byte>() {
@@ -80,8 +80,8 @@ namespace FamiMan.Core
                 { Absolute.Opcode, Absolute.Cycles },
                 { Absolute_X.Opcode, Absolute_X.Cycles },
                 { Absolute_Y.Opcode, Absolute_Y.Cycles },
-                { Indirect_X.Opcode, Indirect_X.Cycles },
-                { Indirect_Y.Opcode, Indirect_Y.Cycles },
+                { IndexedIndirect.Opcode, IndexedIndirect.Cycles },
+                { IndirectIndexed.Opcode, IndirectIndexed.Cycles },
             };
         }
     }

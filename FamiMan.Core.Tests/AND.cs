@@ -27,7 +27,7 @@ namespace FamiMan.Core.Tests
         }
 
         [Fact]
-        public void AND_0x29_Immediate() // TODO: implementation missing in cpu
+        public void AND_0x29_Immediate()
         {
             byte i = 0;
             _c.A = 0x05;
@@ -41,6 +41,143 @@ namespace FamiMan.Core.Tests
             // ________ AND
             // 00000100 - 4
             Assert.Equal(4, _c.A);
+        }
+
+        [Fact]
+        public void AND_0x25_ZeroPage()
+        {
+            byte i = 0;
+            _c.A = 0x05;
+            _b.Ram[i++] = Opcodes.AND.ZeroPage.Opcode;    // AND
+            _b.Ram[i++] = 0x0A;                           // Memory location 0x0A
+            _b.Ram[0x0A] = 14;
+            _c.Tick(Opcodes.AND.ZeroPage.Cycles);
+
+            // 00000101 - 5
+            // 00001110 - 14
+            // ________ AND
+            // 00000100 - 4
+            Assert.Equal(4, _c.A);
+        }
+
+        [Fact]
+        public void AND_0x35_ZeroPage_X()
+        {
+            byte i = 0;
+            _c.A = 0x05;
+            _b.Ram[i++] = Opcodes.AND.ZeroPage_X.Opcode;    // AND
+            _b.Ram[i++] = 0x0A;                             // Memory location 0x0A
+            _c.X = 2;
+            _b.Ram[0x0C] = 14;
+            _c.Tick(Opcodes.AND.ZeroPage_X.Cycles);
+
+            // 00000101 - 5
+            // 00001110 - 14
+            // ________ AND
+            // 00000100 - 4
+            Assert.Equal(4, _c.A);
+        }
+
+        [Fact]
+        public void AND_0x2D_Absolute()
+        {
+            byte i = 0;
+            _c.A = 0x05;
+            _b.Ram[i++] = Opcodes.AND.Absolute.Opcode;    // AND
+
+            _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
+            _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
+
+            _b.Ram[0x03E8] = 14;
+            _c.Tick(Opcodes.AND.Absolute.Cycles);
+
+            // 00000101 - 5
+            // 00001110 - 14
+            // ________ AND
+            // 00000100 - 4
+            Assert.Equal(4, _c.A);
+        }
+
+        [Fact]
+        public void AND_0x3D_Absolute_X()
+        {
+            byte i = 0;
+            _c.A = 0x05;
+            _b.Ram[i++] = Opcodes.AND.Absolute_X.Opcode;    // AND
+
+            _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
+            _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
+            _c.X = 1;               // add 1 to the memory address
+            _b.Ram[0x03E9] = 14;
+
+            _c.Tick(Opcodes.AND.Absolute.Cycles);
+
+            // 00000101 - 5
+            // 00001110 - 14
+            // ________ AND
+            // 00000100 - 4
+            Assert.Equal(4, _c.A);
+        }
+
+        [Fact]
+        public void AND_0x39_Absolute_Y()
+        {
+            byte i = 0;
+            _c.A = 0x05;
+            _b.Ram[i++] = Opcodes.AND.Absolute_Y.Opcode;    // AND
+
+            _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
+            _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
+            _c.Y = 1;               // Add 1 to the memory address
+            _b.Ram[0x03E9] = 14;
+            _c.Tick(Opcodes.AND.Absolute.Cycles);
+
+            // 00000101 - 5
+            // 00001110 - 14
+            // ________ AND
+            // 00000100 - 4
+            Assert.Equal(4, _c.A);
+        }
+
+        [Fact]
+        public void AND_0x31_IndirectY()
+        {
+            _c.A = 5;
+            byte i = 0;
+            _b.Ram[i++] = Opcodes.AND.IndirectIndexed.Opcode;   // Add Indirect_X
+            _b.Ram[i++] = 0xE8;                                 // Memory location: ZP 0x00E8/232d
+            _b[0xE8] = 0x03;                                    // Ptr at memory location 0x00EA/232d points to 0x03
+            _c.Y = 2;                                           // + 2 so 0x05
+            _b[0x05] = 14;                                      // which has value 14
+            _c.Tick(Opcodes.AND.IndirectIndexed.Cycles);        // Tick
+
+            // 00000101 - 5
+            // 00001110 - 14
+            // ________ AND
+            // 00000100 - 4
+            Assert.Equal(4, _c.A);
+            Assert.Equal(Opcodes.AND.IndirectIndexed.Length, _c.PC); // Program counter should have moved to correct value
+        }
+
+        [Fact]
+        public void AND_0x21_IndirectX()
+        {
+            _c.A = 5;
+            byte i = 0;
+            _b.Ram[i++] = Opcodes.AND.IndexedIndirect.Opcode;   // Add Indirect_Y
+            _b.Ram[i++] = 0xE8;                                 // Memory location: ZP 0x00E8/232d
+            _c.X = 2;                                           // + 2 so 0x00EA
+            _b[0xEA] = 0x03;                                    // Ptr at memory location 0x00EA/234d points to 
+            _b[0xEA + 1] = 0x07;                                // 0x0703
+            _b[0x0703] = 14;                                    // which has value 14
+            _c.Tick(Opcodes.AND.IndexedIndirect.Cycles);        // Tick
+
+            // 00000101 - 5
+            // 00001110 - 14
+            // ________ AND
+            // 00000100 - 4
+            Assert.Equal(4, _c.A);
+            Assert.Equal(Opcodes.AND.IndirectIndexed.Length, _c.PC); // Program counter should have moved to correct value
         }
     }
 }

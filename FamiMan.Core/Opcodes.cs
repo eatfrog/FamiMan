@@ -18,4 +18,12 @@ namespace FamiMan.Core
             return _opcodes[v];
         }
     }
+    public enum MemoryMappingMode
+    {
+        Immediate,
+        ZeroPage,
+        Absolute,
+        IndexedIndirect, // Addr + X
+        IndirectIndexed  // Ptr at addr + offset Y
+    }
 }
