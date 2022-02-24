@@ -40,6 +40,10 @@ namespace FamiMan.Core
         public void Tick()
         {
             _ticks++;
+
+            // TODO: take into consideration the cycles needed for a particular opcode
+            // We need to know current instruction here and not in ExecuteNextInstruction()
+
             ExecuteNextInstruction();
         }
 
@@ -49,15 +53,8 @@ namespace FamiMan.Core
                 Tick();
         }
 
-        public void Ticks(int num)
-        {
-            for (int i = 0; i <= num; i++)
-                Tick();
-        }
-
         private void ExecuteNextInstruction()
         {
-            // TODO: take into consideration the cycles needed for a particular opcode
             var i = _bus[PC];
             byte len = 0;
             ushort addr = PC; addr++;
@@ -73,16 +70,16 @@ namespace FamiMan.Core
                 case Opcodes.ADC.Indirect_Y.Opcode: // ADC ($44),Y - $F6 = ptr + Y
                     len = Opcodes.ADC.Lengths[i];
                     if (i == Opcodes.ADC.Absolute.Opcode || i == Opcodes.ADC.Absolute_X.Opcode || i == Opcodes.ADC.Absolute_Y.Opcode)
-                        addr = Get16bitAbsolute(addr);
+                        addr = Get16bitAbsoluteAdress(addr);
                     else if (i == Opcodes.ADC.ZeroPage.Opcode || i == Opcodes.ADC.ZeroPage_X.Opcode)
                         addr = _bus[addr];
                     else if (i == Opcodes.ADC.Indirect_X.Opcode)
                     {
-                        addr = Get16bitAbsolute((ushort)(_bus[addr] + X));
+                        addr = Get16bitAbsoluteAdress((ushort)(_bus[addr] + X));
                     }
                     else if (i == Opcodes.ADC.Indirect_Y.Opcode)
                     {
-                        addr = (ushort)(Get16bitAbsolute(_bus[addr]) + Y);
+                        addr = (ushort)(Get16bitAbsoluteAdress(_bus[addr]) + Y);
                     }
                     if (i == Opcodes.ADC.ZeroPage_X.Opcode || i == Opcodes.ADC.Absolute_X.Opcode) // ZP + X, ABS + X
                         addr += X;
@@ -103,7 +100,7 @@ namespace FamiMan.Core
                     if (len == 2)
                         addr = _bus[addr];
                     else
-                        addr = Get16bitAbsolute(addr);
+                        addr = Get16bitAbsoluteAdress(addr);
 
                     if (i == 0x86) // ZP
                         X = _bus[addr];
@@ -147,7 +144,7 @@ namespace FamiMan.Core
             P.Zero = A == 0;
         }
 
-        private ushort Get16bitAbsolute(ushort addr) => (ushort)(_bus[addr] + (_bus[(byte)(addr + 1)] << 8));
+        private ushort Get16bitAbsoluteAdress(ushort addr) => (ushort)(_bus[addr] + (_bus[(byte)(addr + 1)] << 8));
 
         public class StatusRegisters
         {
