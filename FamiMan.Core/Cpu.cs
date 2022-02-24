@@ -71,7 +71,7 @@ namespace FamiMan.Core
         private void ExecuteNextInstruction()
         {
             var i = _bus[PC];
-            byte len = 0;
+            int len = 0;
             ushort addr = PC; addr++;
             switch (i)
             {
@@ -85,13 +85,11 @@ namespace FamiMan.Core
                 case Opcodes.ADC.IndirectIndexed.Opcode: // ADC ($44),Y - $F6 = ptr + Y
                     len = Opcodes.ADC.Lengths[i];
                     addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
-
                     if (i == Opcodes.ADC.Absolute_X.Opcode || i == Opcodes.ADC.ZeroPage_X.Opcode) addr += X;
                     if (i == Opcodes.ADC.Absolute_Y.Opcode) addr += Y;
 
                     byte val = _bus[addr];
-
-                    CalculateADC(addr, val);
+                    AddToAccumulator(val);
                     break;
                 case Opcodes.STX.ZeroPage.Opcode:   // STX $44       - ZP
                 case Opcodes.STX.ZeroPage_Y.Opcode: // STX $44, Y    - ZP + Y
@@ -132,15 +130,52 @@ namespace FamiMan.Core
                     if (i == Opcodes.AND.Absolute_X.Opcode || i == Opcodes.AND.ZeroPage_X.Opcode) addr += X;
                     if (i == Opcodes.AND.Absolute_Y.Opcode) addr += Y;
 
-                    A &= _bus[addr];
+                    SetAccumulatorAndRegisters(A & _bus[addr]);
                     P.Zero = A == 0;
                     P.Negative = A >> 7 != 0;
+                    break;
+                case Opcodes.ASL.Absolute.Opcode:
+                    len = Opcodes.ASL.Lengths[i];
+                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
+                    var temp = _bus[addr] << 1;
+                    SetAccumulatorAndRegisters(temp);
                     break;
                 default:
                     throw new NotImplementedException("Opcode not implemented");
             }
 
-            PC += len;
+            PC += (ushort)len;
+        }
+
+        private void SetAccumulatorAndRegisters(int val)
+        {
+            var previousValue = A;
+            if (val > 255)
+                A = (byte)(val - 256);
+            else
+                A = (byte)val;
+            SetRegisters(previousValue, val);
+        }
+
+        private void AddToAccumulator(int val)
+        {
+            var previousValue = A;
+            A += P.Carry ? ONE : ZERO;
+
+            if (A + val > 255)
+                A += (byte)(val - 256);
+            else
+                A += (byte)val;
+
+            SetRegisters(previousValue, val);
+        }
+
+        private void SetRegisters(int previousValue, int val)
+        {
+            P.Carry = A < val;
+            P.Overflow = !(A >> 7 == previousValue >> 7);
+            P.Negative = A >> 7 != 0;
+            P.Zero = A == 0;
         }
 
         private ushort ManageMemoryMapMode(ushort addr, Type opcode)

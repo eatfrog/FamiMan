@@ -39,8 +39,8 @@ namespace FamiMan.Core.Tests
             _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
             Assert.Equal(3, _c.A);                          // Accumulator should have 2 more now = 3
 
-            _c.P.Carry = true;                              // If carry flag is set we want to add one more
-            _b.Ram[i++] = 0x69;
+            _c.P.Carry = true;                              // Set carry flag since we want to add one more
+            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x01;                             // So value is 1, we expect 2 more
             _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
             Assert.Equal(5, _c.A);                          // From 3 to 5

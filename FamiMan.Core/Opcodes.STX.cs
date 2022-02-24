@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace FamiMan.Core
 {
@@ -6,6 +8,16 @@ namespace FamiMan.Core
     {
         public static class STX
         {
+            public static Dictionary<byte, int> Lengths;
+
+            public static Dictionary<byte, int> Cycles;
+
+            static STX()
+            {
+                Lengths = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Length").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
+                Cycles = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Cycles").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
+            }
+
             public static class ZeroPage
             {
                 public const byte Opcode = 0x86;
@@ -29,19 +41,6 @@ namespace FamiMan.Core
                 public const int Length = 3;
                 public const MemoryMappingMode Mode = MemoryMappingMode.Absolute;
             }
-
-            public static Dictionary<int, byte> Lengths = new Dictionary<int, byte>() {
-                { ZeroPage.Opcode, ZeroPage.Length },
-                { ZeroPage_Y.Opcode, ZeroPage_Y.Length },
-                { Absolute.Opcode, Absolute.Length },
-
-            };
-
-            public static Dictionary<int, byte> Cycles = new Dictionary<int, byte>() {
-                { ZeroPage.Opcode, ZeroPage.Cycles },
-                { ZeroPage_Y.Opcode, ZeroPage_Y.Cycles },
-                { Absolute.Opcode, Absolute.Cycles },
-            };
         }
     }
 }

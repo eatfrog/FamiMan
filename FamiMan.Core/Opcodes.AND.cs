@@ -1,9 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace FamiMan.Core
 {
     public static partial class Opcodes
     {
+
 
         /*
          *  MODE           SYNTAX       HEX LEN TIM
@@ -19,6 +22,17 @@ namespace FamiMan.Core
 
         public static class AND
         {
+
+            public static Dictionary<byte, int> Lengths;
+
+            public static Dictionary<byte, int> Cycles;
+
+            static AND()
+            {
+                Lengths = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Length").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
+                Cycles = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Cycles").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
+            }
+
             public static class Immediate
             {
                 public const int Cycles = 2;
@@ -83,27 +97,7 @@ namespace FamiMan.Core
                 public const MemoryMappingMode Mode = MemoryMappingMode.IndirectIndexed;
             }
 
-            public static Dictionary<int, byte> Lengths = new Dictionary<int, byte>() {
-                { Immediate.Opcode, Immediate.Length },
-                { ZeroPage.Opcode, ZeroPage.Length },
-                { ZeroPage_X.Opcode, ZeroPage_X.Length },
-                { Absolute.Opcode, Absolute.Length },
-                { Absolute_X.Opcode, Absolute_X.Length },
-                { Absolute_Y.Opcode, Absolute_Y.Length },
-                { IndexedIndirect.Opcode, IndexedIndirect.Length },
-                { IndirectIndexed.Opcode, IndirectIndexed.Length },
-            };
 
-            public static Dictionary<int, byte> Cycles = new Dictionary<int, byte>() {
-                { Immediate.Opcode, Immediate.Cycles },
-                { ZeroPage.Opcode, ZeroPage.Cycles },
-                { ZeroPage_X.Opcode, ZeroPage_X.Cycles },
-                { Absolute.Opcode, Absolute.Cycles },
-                { Absolute_X.Opcode, Absolute_X.Cycles },
-                { Absolute_Y.Opcode, Absolute_Y.Cycles },
-                { IndexedIndirect.Opcode, IndexedIndirect.Cycles },
-                { IndirectIndexed.Opcode, IndirectIndexed.Cycles },
-            };
         }
     }
 }
