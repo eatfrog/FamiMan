@@ -83,15 +83,40 @@ namespace FamiMan.Core
                 case Opcodes.ADC.Absolute_Y.Opcode: // ADC $4400, Y
                 case Opcodes.ADC.IndexedIndirect.Opcode: // ADC($F6, X) - $F6 + X = ptr
                 case Opcodes.ADC.IndirectIndexed.Opcode: // ADC ($44),Y - $F6 = ptr + Y
-                    len = ADC(i, ref addr);
+                    len = Opcodes.ADC.Lengths[i];
+                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
+
+                    if (i == Opcodes.ADC.Absolute_X.Opcode || i == Opcodes.ADC.ZeroPage_X.Opcode) addr += X;
+                    if (i == Opcodes.ADC.Absolute_Y.Opcode) addr += Y;
+
+                    byte val = _bus[addr];
+
+                    CalculateADC(addr, val);
                     break;
                 case Opcodes.STX.ZeroPage.Opcode:   // STX $44       - ZP
                 case Opcodes.STX.ZeroPage_Y.Opcode: // STX $44, Y    - ZP + Y
                 case Opcodes.STX.Absolute.Opcode:   // STX $4400     - Abs
                 case Opcodes.STY.ZeroPage.Opcode:   // STY $44       - ZP
-                case Opcodes.STY.ZeroPage_Y.Opcode: // STY $44, X    - ZP + X
+                case Opcodes.STY.ZeroPage_X.Opcode: // STY $44, X    - ZP + X
                 case Opcodes.STY.Absolute.Opcode:   // STY $4400     - ABS
-                    len = STXSTY(i, ref addr);
+                    if (Opcodes.STX.Lengths.ContainsKey(i))
+                        len = Opcodes.STX.Lengths[i];
+                    else
+                        len = Opcodes.STY.Lengths[i];
+
+                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
+
+                    if (i == Opcodes.STX.ZeroPage_Y.Opcode) addr += Y;
+                    else if (i == Opcodes.STY.ZeroPage_X.Opcode) addr += X;
+
+                    if (i == Opcodes.STX.ZeroPage.Opcode ||
+                        i == Opcodes.STX.ZeroPage_Y.Opcode || 
+                        i == Opcodes.STX.Absolute.Opcode)
+                        X = _bus[addr];
+                    else if (i == Opcodes.STY.ZeroPage.Opcode ||
+                        i == Opcodes.STY.ZeroPage_X.Opcode ||
+                        i == Opcodes.STY.Absolute.Opcode)
+                        Y = _bus[addr];
                     break;
                 case Opcodes.AND.Immediate.Opcode:
                 case Opcodes.AND.ZeroPage.Opcode:
@@ -102,8 +127,7 @@ namespace FamiMan.Core
                 case Opcodes.AND.IndexedIndirect.Opcode:
                 case Opcodes.AND.IndirectIndexed.Opcode:
                     len = Opcodes.AND.Lengths[i];
-                    var opcode = Opcodes.Find(_bus[PC]);
-                    addr = ManageMemoryMapMode(addr, opcode);
+                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
 
                     if (i == Opcodes.AND.Absolute_X.Opcode || i == Opcodes.AND.ZeroPage_X.Opcode) addr += X;
                     if (i == Opcodes.AND.Absolute_Y.Opcode) addr += Y;
@@ -144,65 +168,6 @@ namespace FamiMan.Core
             }
 
             return addr;
-        }
-
-        private byte STXSTY(byte i, ref ushort addr)
-        {
-            byte len;
-            if (Opcodes.STX.Lengths.ContainsKey(i))
-                len = Opcodes.STX.Lengths[i];
-            else
-                len = Opcodes.STY.Lengths[i];
-
-            if (len == 2)
-                addr = _bus[addr];
-            else
-                addr = Get16bitAbsoluteAdress(addr);
-
-            if (i == Opcodes.STX.ZeroPage.Opcode) // ZP
-                X = _bus[addr];
-            else if (i == Opcodes.STY.ZeroPage.Opcode)
-                Y = _bus[addr];
-            else if (i == Opcodes.STX.ZeroPage_Y.Opcode) // + Y
-            {
-                addr += Y;
-                X = _bus[addr];
-            }
-            else if (i == Opcodes.STY.ZeroPage_Y.Opcode)
-            {
-                addr += X;
-                Y = _bus[addr];
-            }
-            else if (i == 0x8E)
-                X = _bus[addr];
-            else if (i == 0x8C)
-                Y = _bus[addr];
-            return len;
-        }
-
-        private byte ADC(byte i, ref ushort addr)
-        {
-            byte len = Opcodes.ADC.Lengths[i];
-            if (i != Opcodes.ADC.Immediate.Opcode)
-            {
-                if (i == Opcodes.ADC.Absolute.Opcode || i == Opcodes.ADC.Absolute_X.Opcode || i == Opcodes.ADC.Absolute_Y.Opcode)
-                    addr = Get16bitAbsoluteAdress(addr);
-                else if (i == Opcodes.ADC.ZeroPage.Opcode || i == Opcodes.ADC.ZeroPage_X.Opcode)
-                    addr = _bus[addr];
-                else if (i == Opcodes.ADC.IndexedIndirect.Opcode)
-                    addr = Get16bitAbsoluteAdress((ushort)(_bus[addr] + X));
-                else if (i == Opcodes.ADC.IndirectIndexed.Opcode)
-                    addr = (ushort)(Get16bitAbsoluteAdress(_bus[addr]) + Y);
-
-                if (i == Opcodes.ADC.ZeroPage_X.Opcode || i == Opcodes.ADC.Absolute_X.Opcode) // ZP + X, ABS + X
-                    addr += X;
-                if (i == Opcodes.ADC.Absolute_Y.Opcode)
-                    addr += Y;
-            }
-
-            byte val = _bus[addr];
-            CalculateADC(addr, val);
-            return len;
         }
 
         private void CalculateADC(ushort addr, byte val)

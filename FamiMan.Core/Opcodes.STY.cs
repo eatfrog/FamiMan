@@ -18,31 +18,34 @@ namespace FamiMan.Core
                 public const byte Opcode = 0x84;
                 public const int Length = 2;
                 public const int Cycles = 3;
+                public const MemoryMappingMode Mode = MemoryMappingMode.ZeroPage;
             }
 
-            public static class ZeroPage_Y
+            public static class ZeroPage_X
             {
                 public const byte Opcode = 0x94;
                 public const int Length = 2;
                 public const int Cycles = 4;
+                public const MemoryMappingMode Mode = MemoryMappingMode.ZeroPage;
             }
             public static class Absolute
             {
                 public const byte Opcode = 0x8C;
                 public const int Length = 3;
                 public const int Cycles = 4;
+                public const MemoryMappingMode Mode = MemoryMappingMode.Absolute;
             }
 
             public static Dictionary<int, byte> Lengths = new Dictionary<int, byte>() {
                 { ZeroPage.Opcode, ZeroPage.Length },
-                { ZeroPage_Y.Opcode, ZeroPage_Y.Length },
+                { ZeroPage_X.Opcode, ZeroPage_X.Length },
                 { Absolute.Opcode, Absolute.Length },
 
             };
 
             public static Dictionary<int, byte> Cycles = new Dictionary<int, byte>() {
                 { ZeroPage.Opcode, ZeroPage.Cycles },
-                { ZeroPage_Y.Opcode, ZeroPage_Y.Cycles },
+                { ZeroPage_X.Opcode, ZeroPage_X.Cycles },
                 { Absolute.Opcode, Absolute.Cycles },
             };
         }

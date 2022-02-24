@@ -11,6 +11,8 @@ namespace FamiMan.Core
                 public const byte Opcode = 0x69;
                 public const int Cycles = 2;
                 public const int Length = 2;
+                public const MemoryMappingMode Mode = MemoryMappingMode.Immediate;
+
             }
 
             public static class ZeroPage
@@ -18,6 +20,8 @@ namespace FamiMan.Core
                 public const byte Opcode = 0x65;
                 public const int Cycles = 3;
                 public const int Length = 2;
+                public const MemoryMappingMode Mode = MemoryMappingMode.ZeroPage;
+
             }
 
             public static class ZeroPage_X
@@ -25,6 +29,8 @@ namespace FamiMan.Core
                 public const byte Opcode = 0x75;
                 public const int Cycles = 4;
                 public const int Length = 2;
+                public const MemoryMappingMode Mode = MemoryMappingMode.ZeroPage;
+
             }
 
             public static class Absolute
@@ -32,6 +38,8 @@ namespace FamiMan.Core
                 public const byte Opcode = 0x6D;
                 public const int Cycles = 4;
                 public const int Length = 3;
+                public const MemoryMappingMode Mode = MemoryMappingMode.Absolute;
+
             }
 
             public static class Absolute_X
@@ -39,6 +47,8 @@ namespace FamiMan.Core
                 public const byte Opcode = 0x7D;
                 public const int Length = 3;
                 public const int Cycles = 4;
+                public const MemoryMappingMode Mode = MemoryMappingMode.Absolute;
+
             }
 
             public static class Absolute_Y
@@ -46,6 +56,8 @@ namespace FamiMan.Core
                 public const byte Opcode = 0x79;
                 public const int Length = 3;
                 public const int Cycles = 4;
+                public const MemoryMappingMode Mode = MemoryMappingMode.Absolute;
+
             }
 
             public static class IndexedIndirect
@@ -53,6 +65,8 @@ namespace FamiMan.Core
                 public const byte Opcode = 0x61;
                 public const int Length = 2;
                 public const int Cycles = 6;
+                public const MemoryMappingMode Mode = MemoryMappingMode.IndexedIndirect;
+
             }
 
             public static class IndirectIndexed
@@ -60,6 +74,8 @@ namespace FamiMan.Core
                 public const byte Opcode = 0x71;
                 public const int Length = 2;
                 public const int Cycles = 5; // Add cycle if page boundary is crossed
+                public const MemoryMappingMode Mode = MemoryMappingMode.IndirectIndexed;
+
             }
 
             public static Dictionary<int, byte> Lengths = new Dictionary<int, byte>() {
