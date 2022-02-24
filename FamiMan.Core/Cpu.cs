@@ -43,6 +43,12 @@ namespace FamiMan.Core
             if (!_waiting)
             {
                 var opcode = Opcodes.Find(_bus[PC]);
+                if (opcode.IsKil()) throw new CpuException("Kil instruction. System halted.");
+                if (opcode.IsNop())
+                {
+                    PC++;
+                    return;
+                }
                 var cycles = opcode.GetCycles();
                 _nextInstruction = cycles - 1;
                 _waiting = true;
@@ -231,22 +237,6 @@ namespace FamiMan.Core
             }
 
             return addr;
-        }
-
-        private void CalculateADC(ushort addr, byte val)
-        {
-            A += P.Carry ? ONE : ZERO;
-
-            int temp = A;
-            if (A + val > 255)
-                A += (byte)(_bus[addr] - 256);
-            else
-                A += val;
-
-            P.Carry = A < val;
-            P.Overflow = !(temp >> 7 == A >> 7);
-            P.Negative = A >> 7 != 0;
-            P.Zero = A == 0;
         }
 
         private ushort Get16bitAbsoluteAdress(ushort addr) => (ushort)(_bus[addr] + (_bus[(byte)(addr + 1)] << 8));

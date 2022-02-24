@@ -21,6 +21,12 @@ namespace FamiMan.Core
             return (int)t.GetField("Cycles").GetValue(t);
         }
 
+        public static bool IsKil(this Type t)
+        {
+            return t.Name.Contains("KIL");
+        }
+
+        public static bool IsNop(this Type t) => t.Name.Contains("NOP");
         public static MemoryMappingMode GetMemoryMappingMode(this Type t)
         {
             return (MemoryMappingMode)t.GetField("Mode").GetValue(t);
