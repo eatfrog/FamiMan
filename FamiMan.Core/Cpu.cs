@@ -36,15 +36,30 @@ namespace FamiMan.Core
         private const byte ZERO = 0;
 
         private long _ticks = 0;
+        private long _nextInstruction = 0;
+        private bool _waiting = false;
 
         public void Tick()
         {
-            _ticks++;
+            if (!_waiting)
+            {
+                var opcode = Opcodes.Find(_bus[PC]);
+                var cycles = opcode.GetCycles();
+                _nextInstruction = cycles - 1;
+                _waiting = true;
+            }
+            else
+                _nextInstruction--;
 
             // TODO: take into consideration the cycles needed for a particular opcode
             // We need to know current instruction here and not in ExecuteNextInstruction()
+            if (_nextInstruction == 0)
+            {
+                _waiting = false;
+                ExecuteNextInstruction();
+            }
 
-            ExecuteNextInstruction();
+            _ticks++;
         }
 
         public void Tick(int ticks)

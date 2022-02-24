@@ -33,16 +33,16 @@ namespace FamiMan.Core.Tests
             _b.Ram[i++] = 0x01;                             // 1
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;     // Add again
             _b.Ram[i++] = 0x02;                             // 2
-            _c.Tick();                                      // Tick
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
             Assert.Equal(1, _c.A);                          // Accumulator should be 1
             Assert.Equal(2, _c.PC);                         // Program counter should have moved to 2
-            _c.Tick();                                      // Another cpu tick
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
             Assert.Equal(3, _c.A);                          // Accumulator should have 2 more now = 3
 
             _c.P.Carry = true;                              // If carry flag is set we want to add one more
             _b.Ram[i++] = 0x69;
             _b.Ram[i++] = 0x01;                             // So value is 1, we expect 2 more
-            _c.Tick();
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
             Assert.Equal(5, _c.A);                          // From 3 to 5
 
             _c.A = 0;                                       // Reset
@@ -50,8 +50,9 @@ namespace FamiMan.Core.Tests
             _b.Ram[i++] = 0xF0;                             // Lets add 240
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x10;                             // And 16
-            _c.Tick();
-            _c.Tick();
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
+
             Assert.Equal(0, _c.A);          // 0 in Acc
             Assert.True(_c.P.Carry);        // 1 in carry
 
@@ -62,14 +63,14 @@ namespace FamiMan.Core.Tests
             _c.A = 1;                       // Reset
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x80;             // Lets add 128
-            _c.Tick();
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);  // Tick
             Assert.Equal(129, _c.A);        // 129 in A
             Assert.True(_c.P.Overflow);     // 1 in overflow
 
 
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x01;             // Lets add 1
-            _c.Tick();
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);  // Tick
             Assert.Equal(130, _c.A);        // 129 in A
             Assert.False(_c.P.Overflow);    // 0 in overflow
 
@@ -80,13 +81,13 @@ namespace FamiMan.Core.Tests
             _c.A = 1;                        // Reset
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x01;              // Lets add 1
-            _c.Tick();
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);  // Tick
             Assert.Equal(2, _c.A);           // 2 in A
             Assert.False(_c.P.Negative);     // 0 in negative
 
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x80;              // Lets add 128
-            _c.Tick();
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);  // Tick
             Assert.Equal(130, _c.A);         // 130 in A, 2 + 128
             Assert.True(_c.P.Negative);      // 1 in negative
 
@@ -97,14 +98,14 @@ namespace FamiMan.Core.Tests
             _c.A = 0;                        // Reset
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x00;              // Lets add 0
-            _c.Tick();
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);  // Tick
             Assert.Equal(0, _c.A);           // 0 in A
             Assert.True(_c.P.Zero);          // 1 in zero
 
             _c.A = 1;                        // Reset
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0xFF;              // Lets add 255
-            _c.Tick();
+            _c.Tick(Opcodes.ADC.Immediate.Cycles);  // Tick
 
             Assert.Equal(0, _c.A);           // 0 in A
             Assert.True(_c.P.Zero);          // 1 in zero
@@ -139,11 +140,11 @@ namespace FamiMan.Core.Tests
         public void ADC_0x75_ZeroPageX()
         {
             byte i = 0;
-            _b.Ram[i++] = 0x75;     // Add Zero page
+            _b.Ram[i++] = Opcodes.ADC.ZeroPage_X.Opcode;     // Add Zero page X
             _b.Ram[i++] = 0xE8;     // Memory location: 0x00E8/232d
             _c.X = 1;
             _b[0x00E9] = 0x02;      // 2 at memory location 0x00E9
-            _c.Tick();              // Tick
+            _c.Tick(Opcodes.ADC.ZeroPage_X.Cycles);              // Tick
             Assert.Equal(2, _c.A);  // Accumulator should be 2
             Assert.Equal(2, _c.PC); // Program counter should have moved to 3
         }
@@ -152,29 +153,29 @@ namespace FamiMan.Core.Tests
         public void ADC_0x7D_AbsoluteX()
         {            
             byte i = 0;
-            _b.Ram[i++] = 0x7D;     // Add Absolute
-            _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
-            _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
+            _b.Ram[i++] = Opcodes.ADC.Absolute_X.Opcode;    // Add Absolute X
+            _b.Ram[i++] = 0xE8;                             // Memory location: 0x03E8/1000d
+            _b.Ram[i++] = 0x03;                             // Little endian, The least significant byte (LSB) value, is at the lowest address.
             _c.X = 1;
-            _b[0x03E9] = 0x04;      // 4 at memory location 0x3E9/1001d
-            _c.Tick();              // Tick
-            Assert.Equal(4, _c.A);  // Accumulator should be 4
-            Assert.Equal(3, _c.PC); // Program counter should have moved to 3
+            _b[0x03E9] = 0x04;                              // 4 at memory location 0x3E9/1001d
+            _c.Tick(Opcodes.ADC.Absolute_X.Cycles);         // Tick
+            Assert.Equal(4, _c.A);                          // Accumulator should be 4
+            Assert.Equal(3, _c.PC);                         // Program counter should have moved to 3
         }
 
         [Fact]
         public void ADC_0x79_AbsoluteY()
         {
             byte i = 0;
-            _b.Ram[i++] = 0x79;     // Add Absolute
-            _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
-            _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
+            _b.Ram[i++] = Opcodes.ADC.Absolute_Y.Opcode;    // Add Absolute Y
+            _b.Ram[i++] = 0xE8;                             // Memory location: 0x03E8/1000d
+            _b.Ram[i++] = 0x03;                             // Little endian, The least significant byte (LSB) value, is at the lowest address.
             _c.X = 5; 
             _c.Y = 1;
-            _b[0x03E9] = 0x12;      // 18 at memory location 0x3E9/1001d
-            _c.Tick();              // Tick
-            Assert.Equal(18, _c.A); // Accumulator should be 18
-            Assert.Equal(3, _c.PC); // Program counter should have moved to 3
+            _b[0x03E9] = 0x12;                              // 18 at memory location 0x3E9/1001d
+            _c.Tick(Opcodes.ADC.Absolute_Y.Cycles);         // Tick
+            Assert.Equal(18, _c.A);                         // Accumulator should be 18
+            Assert.Equal(3, _c.PC);                         // Program counter should have moved to 3
         }
 
         [Fact]

@@ -39,15 +39,13 @@ namespace FamiMan.Core.Tests
         [Fact]
         public void STX_0x96_ZeroPageY()
         {
-            byte opcode = 0x96;
             byte i = 0;
-            _b.Ram[i++] = opcode;     // Store to X that is in memory location
+            _b.Ram[i++] = Opcodes.STX.ZeroPage_Y.Opcode;     // Store to X that is in memory location
             _b.Ram[i++] = 0x64;     // 0x64
             _c.Y = 0x01;            // Memloc + Y = 0x65
             _b[0x65] = 123;         // Value to store in X register
 
-            for (int t = 0; t <= Constants.STXSTY.Cycles[opcode]; t++)
-                _c.Tick();              // Tick
+            _c.Tick(Opcodes.STX.ZeroPage_Y.Cycles);              // Tick
 
             Assert.Equal(0, _c.A);  // Accumulator should be 0
             Assert.Equal(2, _c.PC); // Program counter should have moved to 2
