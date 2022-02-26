@@ -193,6 +193,30 @@ namespace FamiMan.Core
                         PC += _bus[addr];
                     P.Carry = temp;
                     break;
+                case Opcodes.LDA.Immediate.Opcode:
+                case Opcodes.LDA.Absolute_Y.Opcode:
+                case Opcodes.LDA.Absolute.Opcode:
+                case Opcodes.LDA.Absolute_X.Opcode:
+                case Opcodes.LDA.IndexedIndirect.Opcode:
+                case Opcodes.LDA.IndirectIndexed.Opcode:
+                case Opcodes.LDA.ZeroPage.Opcode:
+                case Opcodes.LDA.ZeroPage_X.Opcode:
+                case Opcodes.LDX.Immediate.Opcode:
+                case Opcodes.LDX.Absolute.Opcode:
+                case Opcodes.LDX.Absolute_Y.Opcode:
+                case Opcodes.LDX.ZeroPage.Opcode:
+                case Opcodes.LDX.ZeroPage_Y.Opcode:
+
+                    len = Opcodes.LDA.Lengths[i];
+                    addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
+                    if (i == Opcodes.LDA.Absolute_X.Opcode || i == Opcodes.LDA.ZeroPage_X.Opcode) addr += X;
+                    if (i == Opcodes.LDA.Absolute_Y.Opcode || i == Opcodes.LDX.Absolute_Y.Opcode) addr += Y;
+
+                    if (opcode.OpcodeName == "LDA")
+                        A = _bus[addr];
+                    else if (opcode.OpcodeName == "LDX")
+                        X = _bus[addr];
+                    break;
                 default:
                     throw new NotImplementedException("Opcode not implemented");
             }
