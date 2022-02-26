@@ -20,11 +20,11 @@ namespace FamiMan.Core.Tests
         [Fact]
         public void OpcodePopulatesLookupTable()
         {
-            Type opcode = Opcodes.Find(0x61);
-            Assert.Equal(typeof(Opcodes.ADC.IndexedIndirect), opcode);
-            Assert.Equal(0x61, opcode.GetOpcode());
-            Assert.Equal(2, opcode.GetLength());
-            Assert.Equal(6, opcode.GetCycles());
+            Opcode opcode = Opcodes.Find(0x61);
+            Assert.Equal(typeof(Opcodes.ADC.IndexedIndirect), opcode.BackingType);
+            Assert.Equal(0x61, opcode.BackingType.GetOpcode());
+            Assert.Equal(2, opcode.BackingType.GetLength());
+            Assert.Equal(6, opcode.BackingType.GetCycles());
         }
 
         [Fact]

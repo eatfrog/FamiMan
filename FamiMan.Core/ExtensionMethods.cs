@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace FamiMan.Core
@@ -21,15 +22,15 @@ namespace FamiMan.Core
             return (int)t.GetField("Cycles").GetValue(t);
         }
 
-        public static bool IsKil(this Type t)
-        {
-            return t.Name.Contains("KIL");
-        }
+        public static bool IsKil(this Opcode t) => t.OpcodeName == "KIL";
 
-        public static bool IsNop(this Type t) => t.Name.Contains("NOP");
+        public static bool IsNop(this Opcode t) => t.OpcodeName == "NOP";
+
         public static MemoryMappingMode GetMemoryMappingMode(this Type t)
         {
-            return (MemoryMappingMode)t.GetField("Mode").GetValue(t);
+            var temp = t.GetField("Mode");
+            if (temp == null) return MemoryMappingMode.None;
+            return (MemoryMappingMode) temp.GetValue(t);
         }
     }
 }

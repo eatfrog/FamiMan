@@ -40,31 +40,29 @@ namespace FamiMan.Core
 
         public void Tick()
         {
+            _ticks++;
+            Opcode opcode = Opcodes.Find(_bus[PC]);
             if (!_waiting)
             {
-                var opcode = Opcodes.Find(_bus[PC]);
                 if (opcode.IsKil()) throw new CpuException("Kil instruction. System halted.");
                 if (opcode.IsNop())
                 {
                     PC++;
                     return;
                 }
-                var cycles = opcode.GetCycles();
-                _nextInstruction = cycles - 1;
+                _nextInstruction = opcode.Cycles - 1;
                 _waiting = true;
             }
             else
                 _nextInstruction--;
 
-            // TODO: take into consideration the cycles needed for a particular opcode
-            // We need to know current instruction here and not in ExecuteNextInstruction()
+
             if (_nextInstruction == 0)
             {
                 _waiting = false;
-                ExecuteNextInstruction();
+                ExecuteNextInstruction(opcode);
             }
 
-            _ticks++;
         }
 
         public void Tick(int ticks)
@@ -73,10 +71,10 @@ namespace FamiMan.Core
                 Tick();
         }
 
-        private void ExecuteNextInstruction()
+        private void ExecuteNextInstruction(Opcode opcode)
         {
             var i = _bus[PC];
-            int len = 0;
+            int len;
             ushort addr = PC; addr++;
             switch (i)
             {
@@ -89,7 +87,7 @@ namespace FamiMan.Core
                 case Opcodes.ADC.IndexedIndirect.Opcode: // ADC($F6, X) - $F6 + X = ptr
                 case Opcodes.ADC.IndirectIndexed.Opcode: // ADC ($44),Y - $F6 = ptr + Y
                     len = Opcodes.ADC.Lengths[i];
-                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
+                    addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
                     if (i == Opcodes.ADC.Absolute_X.Opcode || i == Opcodes.ADC.ZeroPage_X.Opcode) addr += X;
                     if (i == Opcodes.ADC.Absolute_Y.Opcode) addr += Y;
 
@@ -107,7 +105,7 @@ namespace FamiMan.Core
                     else
                         len = Opcodes.STY.Lengths[i];
 
-                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
+                    addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
 
                     if (i == Opcodes.STX.ZeroPage_Y.Opcode) addr += Y;
                     else if (i == Opcodes.STY.ZeroPage_X.Opcode) addr += X;
@@ -130,7 +128,7 @@ namespace FamiMan.Core
                 case Opcodes.AND.IndexedIndirect.Opcode:
                 case Opcodes.AND.IndirectIndexed.Opcode:
                     len = Opcodes.AND.Lengths[i];
-                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
+                    addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
 
                     if (i == Opcodes.AND.Absolute_X.Opcode || i == Opcodes.AND.ZeroPage_X.Opcode) addr += X;
                     if (i == Opcodes.AND.Absolute_Y.Opcode) addr += Y;
@@ -144,35 +142,56 @@ namespace FamiMan.Core
                 case Opcodes.ASL.ZeroPage.Opcode:
                 case Opcodes.ASL.ZeroPage_X.Opcode:
                 case Opcodes.ASL.Accumulator.Opcode:
-                    len = Opcodes.ASL.Lengths[i];
-                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
-
-                    if (i == Opcodes.ASL.ZeroPage_X.Opcode || i == Opcodes.ASL.Absolute_X.Opcode) addr += X;
-
-                    if (i != Opcodes.ASL.Accumulator.Opcode)
-                        SetAccumulatorAndRegisters(_bus[addr] << 1);
-                    else
-                        SetAccumulatorAndRegisters(A << 1);
-
-                    break;
                 case Opcodes.LSR.Absolute.Opcode:
                 case Opcodes.LSR.Absolute_X.Opcode:
                 case Opcodes.LSR.ZeroPage.Opcode:
                 case Opcodes.LSR.ZeroPage_X.Opcode:
                 case Opcodes.LSR.Accumulator.Opcode:
+                case Opcodes.ROL.Absolute.Opcode:
+                case Opcodes.ROL.Absolute_X.Opcode:
+                case Opcodes.ROL.ZeroPage.Opcode:
+                case Opcodes.ROL.ZeroPage_X.Opcode:
+                case Opcodes.ROL.Accumulator.Opcode:
+                case Opcodes.ROR.Absolute.Opcode:
+                case Opcodes.ROR.Absolute_X.Opcode:
+                case Opcodes.ROR.ZeroPage.Opcode:
+                case Opcodes.ROR.ZeroPage_X.Opcode:
+                case Opcodes.ROR.Accumulator.Opcode:
                     len = Opcodes.LSR.Lengths[i];
-                    addr = ManageMemoryMapMode(addr, Opcodes.Find(_bus[PC]));
+                    addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
 
-                    if (i == Opcodes.LSR.ZeroPage_X.Opcode || i == Opcodes.LSR.Absolute_X.Opcode) addr += X;
-
-                    int lsb = A & ~(A - 1);
-                    if (i != Opcodes.LSR.Accumulator.Opcode)
-                        SetAccumulatorAndRegisters(_bus[addr] >> 1);
-                    else
+                    if (opcode.OpcodeVersionName == "ZeroPage_X" || opcode.OpcodeVersionName == "Absolute_X") addr += X;
+                    bool carryValue = P.Carry;
+                    var lsb = (A & ~(A - 1));
+                    if (i == Opcodes.ASL.Accumulator.Opcode || i == Opcodes.ROL.Accumulator.Opcode)
+                        SetAccumulatorAndRegisters(A << 1);
+                    else if (i == Opcodes.LSR.Accumulator.Opcode || i == Opcodes.ROR.Accumulator.Opcode)
                         SetAccumulatorAndRegisters(A >> 1);
+                    else if (opcode.OpcodeName == "LSR" || opcode.OpcodeName == "ROR")
+                        SetAccumulatorAndRegisters(_bus[addr] >> 1);
+                    else if (opcode.OpcodeName == "ASL" || opcode.OpcodeName == "ROL")
+                        SetAccumulatorAndRegisters(_bus[addr] << 1);                    
+                    if (opcode.OpcodeName == "LSR")
+                        P.Carry = lsb == 1;
 
-                    P.Carry = lsb == 1;
+                    if (opcode.OpcodeName == "ROL" && carryValue) A |= 1;
+                    if (opcode.OpcodeName == "ROR")
+                    {
+                        if (carryValue) A |= 128;
+                        P.Carry = lsb == 1;
+                    }
+                    break;
+                case Opcodes.Branches.BCC.Opcode:
+                case Opcodes.Branches.BCS.Opcode:
+                case Opcodes.Branches.BEQ.Opcode:
+                    len = Opcodes.Branches.BCC.Length;
+                    var temp = P.Carry;
+                    if ((i == Opcodes.Branches.BCC.Opcode && !temp) ||
+                        (i == Opcodes.Branches.BCS.Opcode && temp)) PC += _bus[addr];
 
+                    if (i == Opcodes.Branches.BEQ.Opcode && P.Zero)
+                        PC += _bus[addr];
+                    P.Carry = temp;
                     break;
                 default:
                     throw new NotImplementedException("Opcode not implemented");
@@ -212,10 +231,8 @@ namespace FamiMan.Core
             P.Zero = A == 0;
         }
 
-        private ushort ManageMemoryMapMode(ushort addr, Type opcode)
+        private ushort ManageMemoryMapMode(ushort addr, MemoryMappingMode memorymap)
         {
-            MemoryMappingMode memorymap = opcode.GetMemoryMappingMode();
-
             switch (memorymap)
             {
                 case MemoryMappingMode.Immediate:
