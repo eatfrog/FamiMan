@@ -117,13 +117,6 @@
                 public const int Cycles = 1;
             }
 
-            public static class NOP_98
-            {
-                public const byte Opcode = 0x98;
-                public const int Length = 1;
-                public const int Cycles = 1;
-            }
-
             public static class NOP_DA
             {
                 public const byte Opcode = 0xDA;

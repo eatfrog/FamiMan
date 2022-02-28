@@ -76,16 +76,9 @@ namespace FamiMan.Core
             var i = _bus[PC];
             int len;
             ushort addr = PC; addr++;
-            switch (i)
+            switch (opcode.OpcodeName)
             {
-                case Opcodes.ADC.Immediate.Opcode:  // ADC #$44  - Immediate
-                case Opcodes.ADC.Absolute.Opcode:   // ADC $4400 - Absolute
-                case Opcodes.ADC.ZeroPage.Opcode:   // ADC $44   - Zero page
-                case Opcodes.ADC.ZeroPage_X.Opcode: // ADC $44, X
-                case Opcodes.ADC.Absolute_X.Opcode: // ADC $4400, X
-                case Opcodes.ADC.Absolute_Y.Opcode: // ADC $4400, Y
-                case Opcodes.ADC.IndexedIndirect.Opcode: // ADC($F6, X) - $F6 + X = ptr
-                case Opcodes.ADC.IndirectIndexed.Opcode: // ADC ($44),Y - $F6 = ptr + Y
+                case "ADC":
                     len = Opcodes.ADC.Lengths[i];
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
                     if (i == Opcodes.ADC.Absolute_X.Opcode || i == Opcodes.ADC.ZeroPage_X.Opcode) addr += X;
@@ -94,12 +87,8 @@ namespace FamiMan.Core
                     byte val = _bus[addr];
                     AddToAccumulator(val);
                     break;
-                case Opcodes.STX.ZeroPage.Opcode:   // STX $44       - ZP
-                case Opcodes.STX.ZeroPage_Y.Opcode: // STX $44, Y    - ZP + Y
-                case Opcodes.STX.Absolute.Opcode:   // STX $4400     - Abs
-                case Opcodes.STY.ZeroPage.Opcode:   // STY $44       - ZP
-                case Opcodes.STY.ZeroPage_X.Opcode: // STY $44, X    - ZP + X
-                case Opcodes.STY.Absolute.Opcode:   // STY $4400     - ABS
+                case "STX":
+                case "STY":
                     if (Opcodes.STX.Lengths.ContainsKey(i))
                         len = Opcodes.STX.Lengths[i];
                     else
@@ -119,14 +108,7 @@ namespace FamiMan.Core
                         i == Opcodes.STY.Absolute.Opcode)
                         Y = _bus[addr];
                     break;
-                case Opcodes.AND.Immediate.Opcode:
-                case Opcodes.AND.ZeroPage.Opcode:
-                case Opcodes.AND.ZeroPage_X.Opcode:
-                case Opcodes.AND.Absolute_X.Opcode:
-                case Opcodes.AND.Absolute_Y.Opcode:
-                case Opcodes.AND.Absolute.Opcode:
-                case Opcodes.AND.IndexedIndirect.Opcode:
-                case Opcodes.AND.IndirectIndexed.Opcode:
+                case "AND":
                     len = Opcodes.AND.Lengths[i];
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
 
@@ -137,26 +119,10 @@ namespace FamiMan.Core
                     P.Zero = A == 0;
                     P.Negative = A >> 7 != 0;
                     break;
-                case Opcodes.ASL.Absolute.Opcode:
-                case Opcodes.ASL.Absolute_X.Opcode:
-                case Opcodes.ASL.ZeroPage.Opcode:
-                case Opcodes.ASL.ZeroPage_X.Opcode:
-                case Opcodes.ASL.Accumulator.Opcode:
-                case Opcodes.LSR.Absolute.Opcode:
-                case Opcodes.LSR.Absolute_X.Opcode:
-                case Opcodes.LSR.ZeroPage.Opcode:
-                case Opcodes.LSR.ZeroPage_X.Opcode:
-                case Opcodes.LSR.Accumulator.Opcode:
-                case Opcodes.ROL.Absolute.Opcode:
-                case Opcodes.ROL.Absolute_X.Opcode:
-                case Opcodes.ROL.ZeroPage.Opcode:
-                case Opcodes.ROL.ZeroPage_X.Opcode:
-                case Opcodes.ROL.Accumulator.Opcode:
-                case Opcodes.ROR.Absolute.Opcode:
-                case Opcodes.ROR.Absolute_X.Opcode:
-                case Opcodes.ROR.ZeroPage.Opcode:
-                case Opcodes.ROR.ZeroPage_X.Opcode:
-                case Opcodes.ROR.Accumulator.Opcode:
+                case "ASL":
+                case "LSR":
+                case "ROL":
+                case "ROR":
                     len = Opcodes.LSR.Lengths[i];
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
 
@@ -181,9 +147,9 @@ namespace FamiMan.Core
                         P.Carry = lsb == 1;
                     }
                     break;
-                case Opcodes.Branches.BCC.Opcode:
-                case Opcodes.Branches.BCS.Opcode:
-                case Opcodes.Branches.BEQ.Opcode:
+                case "BCC":
+                case "BCS":
+                case "BEQ":
                     len = Opcodes.Branches.BCC.Length;
                     var temp = P.Carry;
                     if ((i == Opcodes.Branches.BCC.Opcode && !temp) ||
@@ -193,29 +159,54 @@ namespace FamiMan.Core
                         PC += _bus[addr];
                     P.Carry = temp;
                     break;
-                case Opcodes.LDA.Immediate.Opcode:
-                case Opcodes.LDA.Absolute_Y.Opcode:
-                case Opcodes.LDA.Absolute.Opcode:
-                case Opcodes.LDA.Absolute_X.Opcode:
-                case Opcodes.LDA.IndexedIndirect.Opcode:
-                case Opcodes.LDA.IndirectIndexed.Opcode:
-                case Opcodes.LDA.ZeroPage.Opcode:
-                case Opcodes.LDA.ZeroPage_X.Opcode:
-                case Opcodes.LDX.Immediate.Opcode:
-                case Opcodes.LDX.Absolute.Opcode:
-                case Opcodes.LDX.Absolute_Y.Opcode:
-                case Opcodes.LDX.ZeroPage.Opcode:
-                case Opcodes.LDX.ZeroPage_Y.Opcode:
 
+                case "LDA":
+                case "LDX":
+                case "LDY":
                     len = Opcodes.LDA.Lengths[i];
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
-                    if (i == Opcodes.LDA.Absolute_X.Opcode || i == Opcodes.LDA.ZeroPage_X.Opcode) addr += X;
+                    if (i == Opcodes.LDA.Absolute_X.Opcode || i == Opcodes.LDA.ZeroPage_X.Opcode || i == Opcodes.LDY.ZeroPage_X.Opcode || i == Opcodes.LDY.Absolute_X.Opcode) addr += X;
                     if (i == Opcodes.LDA.Absolute_Y.Opcode || i == Opcodes.LDX.Absolute_Y.Opcode) addr += Y;
 
                     if (opcode.OpcodeName == "LDA")
                         A = _bus[addr];
                     else if (opcode.OpcodeName == "LDX")
                         X = _bus[addr];
+                    else if (opcode.OpcodeName == "LDY")
+                        Y = _bus[addr];
+                    break;
+
+                case "TAX":
+                    len = Opcodes.Registers.TAX.Length;
+                    X = A;
+                    break;
+                case "TXA":
+                    len = Opcodes.Registers.TXA.Length;
+                    A = X;
+                    break;
+                case "DEX":
+                    len = Opcodes.Registers.DEX.Length;
+                    X--;
+                    break;
+                case "INX":
+                    len = Opcodes.Registers.INX.Length;
+                    X++;
+                    break;
+                case "TAY":
+                    len = Opcodes.Registers.TAY.Length;
+                    Y = A;
+                    break;
+                case "TYA":
+                    len = Opcodes.Registers.TYA.Length;
+                    A = Y;
+                    break;
+                case "DEY":
+                    len = Opcodes.Registers.DEY.Length;
+                    Y--;
+                    break;
+                case "INY":
+                    len = Opcodes.Registers.INY.Length;
+                    Y++;
                     break;
                 default:
                     throw new NotImplementedException("Opcode not implemented");

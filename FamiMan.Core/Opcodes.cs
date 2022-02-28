@@ -17,7 +17,7 @@ namespace FamiMan.Core
                         BackingType = t.UnderlyingSystemType,
                         MemoryMappingMode = t.GetMemoryMappingMode(),
                         OpcodeVersionName = t.Name,
-                        OpcodeName = t.UnderlyingSystemType.ReflectedType.Name,
+                        OpcodeName = t.Name.Length == 3 ? t.Name : t.UnderlyingSystemType.ReflectedType.Name,
                         Cycles = t.GetCycles()
                     }))
                 .ToDictionary(x => x.Item1, x => x.Item2);
