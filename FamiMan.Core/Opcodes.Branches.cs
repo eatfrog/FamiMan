@@ -13,21 +13,35 @@ namespace FamiMan.Core
             public static class BCC
             {
                 public const byte Opcode = 0x90;
-                public const int Length = 1;
+                public const int Length = 2;
                 public const int Cycles = 2;
             }
 
             public static class BCS
             {
                 public const byte Opcode = 0xB0;
-                public const int Length = 1;
+                public const int Length = 2;
                 public const int Cycles = 2;
             }
 
             public static class BEQ
             {
                 public const byte Opcode = 0xF0;
-                public const int Length = 1;
+                public const int Length = 2;
+                public const int Cycles = 2;
+            }
+
+            public static class BNE
+            {
+                public const byte Opcode = 0xD0;
+                public const int Length = 2;
+                public const int Cycles = 2;
+            }
+
+            public static class BMI
+            {
+                public const byte Opcode = 0x30;
+                public const int Length = 2;
                 public const int Cycles = 2;
             }
         }

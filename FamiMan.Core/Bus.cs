@@ -8,7 +8,7 @@ namespace FamiMan.Core
     {
         public Bus()
         {
-            Ram = new Ram(2 * Constants.KB);
+            Ram = new Ram(2 * 1024);
             Cpu = new Cpu(this);
             Ppu = new Ppu(this);
         }

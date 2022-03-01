@@ -45,38 +45,32 @@ namespace FamiMan.Core.Tests
             _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
             Assert.Equal(5, _c.A);                          // From 3 to 5
 
-            _c.A = 0;                                       // Reset
+            _c.A = 0x50;                                    // Set to 80
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0xF0;                             // Lets add 240
-            _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0x10;                             // And 16
-            _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
+            _b.Ram[i++] = 0x50;                             // Lets add 80
             _c.Tick(Opcodes.ADC.Immediate.Cycles);          // Tick
 
-            Assert.Equal(0, _c.A);          // 0 in Acc
-            Assert.True(_c.P.Carry);        // 1 in carry
+            Assert.Equal(160, _c.A);         // 160 in Acc
+            Assert.False(_c.P.Carry);        // 0 in carry
 
             // ______ OVERFLOW FLAG ________
             // We moved from 0-128 <-> 129-255 range
-            Assert.True(_c.P.Overflow);    // 1 in overflow, 240 -> 1
+            Assert.True(_c.P.Overflow); 
 
-            _c.A = 1;                       // Reset
+            _c.A = 0xd0;                       
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0x80;             // Lets add 128
+            _b.Ram[i++] = 0x90;      
             _c.Tick(Opcodes.ADC.Immediate.Cycles);  // Tick
-            Assert.Equal(129, _c.A);        // 129 in A
+            Assert.Equal(96, _c.A);    
             Assert.True(_c.P.Overflow);     // 1 in overflow
-
+            Assert.True(_c.P.Carry);
 
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
             _b.Ram[i++] = 0x01;             // Lets add 1
             _c.Tick(Opcodes.ADC.Immediate.Cycles);  // Tick
-            Assert.Equal(130, _c.A);        // 129 in A
+            Assert.Equal(0x61, _c.A);     
             Assert.False(_c.P.Overflow);    // 0 in overflow
-
-            // ______ NEGATIVE FLAG _______
-            // Result is more than 127
-            Assert.True(_c.P.Negative);
+            Assert.False(_c.P.Negative);
 
             _c.A = 1;                        // Reset
             _b.Ram[i++] = Opcodes.ADC.Immediate.Opcode;
