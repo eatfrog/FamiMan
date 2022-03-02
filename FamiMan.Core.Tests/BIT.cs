@@ -31,7 +31,24 @@ namespace FamiMan.Core.Tests
             Assert.True(_c.P.Overflow);
             Assert.True(_c.P.Negative);
             Assert.Equal(160, _c.A);
+        }
 
+        [Fact]
+        public void BIT_0x2C_Absolute()
+        {
+            byte i = 0;
+            _c.A = 0xA0;
+            _b.Ram[i++] = Opcodes.BIT.Absolute.Opcode;    // BIT
+            _b.Ram[i++] = 0x0A;                          
+            _b.Ram[i++] = 0x01;                           // Memory location 0x010A
+
+            _b.Ram[0x10A] = 0xA0;
+            _c.Tick(Opcodes.AND.Absolute.Cycles);
+
+            Assert.False(_c.P.Zero);
+            Assert.True(_c.P.Overflow);
+            Assert.True(_c.P.Negative);
+            Assert.Equal(160, _c.A);
         }
     }
 }

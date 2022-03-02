@@ -120,29 +120,51 @@ namespace FamiMan.Core
                     break;
                 case "AND":
                 case "BIT":
+                case "EOR":
+                case "ORA":
                 {
-                    len = Opcodes.AND.Lengths[i];
+                    len = 1;
+                    if (Opcodes.AND.Lengths.ContainsKey(i))
+                        len = Opcodes.AND.Lengths[i];
+                    else if (Opcodes.EOR.Lengths.ContainsKey(i))
+                        len = Opcodes.EOR.Lengths[i];
+                    else if (Opcodes.BIT.Lengths.ContainsKey(i))
+                        len = Opcodes.BIT.Lengths[i];
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
 
-                    if (i == Opcodes.AND.Absolute_X.Opcode || i == Opcodes.AND.ZeroPage_X.Opcode) addr += X;
-                    if (i == Opcodes.AND.Absolute_Y.Opcode) addr += Y;
+                    if (i == Opcodes.AND.Absolute_X.Opcode || 
+                        i == Opcodes.AND.ZeroPage_X.Opcode || 
+                        i == Opcodes.EOR.ZeroPage_X.Opcode ||
+                        i == Opcodes.EOR.Absolute_X.Opcode || 
+                        i == Opcodes.ORA.Absolute_X.Opcode ||
+                        i == Opcodes.ORA.ZeroPage_X.Opcode) addr += X;
+                    if (i == Opcodes.AND.Absolute_Y.Opcode || 
+                        i == Opcodes.EOR.Absolute_Y.Opcode ||
+                        i == Opcodes.ORA.Absolute_Y.Opcode) addr += Y;
 
 
 
                     byte val = _bus[addr];
-                    byte setValue = (byte)(A & val);
+                    byte setValue = 0;
+                    if (opcode.OpcodeName == "AND" || opcode.OpcodeName == "BIT")
+                        setValue = (byte)(A & val);
+                    else if (opcode.OpcodeName == "EOR")
+                        setValue = (byte)(A ^ val);
+                    else if (opcode.OpcodeName == "ORA")
+                        setValue = (byte)(A | val);
 
                     //P.Overflow = ((A ^ val) & 0x80) == 0
-                    //        && ((A ^ setValue) & 0x80) != 0;
+                    //            && ((A ^ setValue) & 0x80) != 0;
 
                     P.Negative = (setValue & 0x80) != 0; // bit 7
-                    P.Zero = setValue == 0;
 
-                    if (opcode.OpcodeName == "AND")
+                    if (opcode.OpcodeName == "AND" || opcode.OpcodeName == "EOR" || opcode.OpcodeName == "ORA")
+                    {
+                        P.Zero = setValue == 0;
                         A = setValue;
-                    else
+                    }
+                    else if (opcode.OpcodeName == "BIT")
                         P.Overflow = (setValue & (1 << 5)) != 0;
-
 
                     break;
                 }
@@ -179,6 +201,9 @@ namespace FamiMan.Core
                 case "BEQ":
                 case "BNE":
                 case "BMI":
+                case "BPL":
+                case "BVC":
+                case "BVS":
                     len = Opcodes.Branches.BCC.Length;
                     var temp = P.Carry;
                     if ((i == Opcodes.Branches.BCC.Opcode && !temp) ||
@@ -189,6 +214,12 @@ namespace FamiMan.Core
                     else if (i == Opcodes.Branches.BNE.Opcode && !P.Zero)
                         PC += _bus[addr];
                     else if (i == Opcodes.Branches.BMI.Opcode && P.Negative)
+                        PC += _bus[addr];
+                    else if (i == Opcodes.Branches.BPL.Opcode && !P.Negative)
+                        PC += _bus[addr];
+                    else if (i == Opcodes.Branches.BVC.Opcode && !P.Overflow)
+                        PC += _bus[addr];
+                    else if (i == Opcodes.Branches.BVS.Opcode && P.Overflow)
                         PC += _bus[addr];
                     P.Carry = temp;
                     break;
@@ -247,6 +278,48 @@ namespace FamiMan.Core
                 case "INY":
                     len = Opcodes.Registers.INY.Length;
                     Y++;
+                    break;
+                case "CLC":
+                    len = Opcodes.Flags.CLC.Length;
+                    P.Carry = false;
+                    break;
+                case "SEC":
+                    len = Opcodes.Flags.CLC.Length;
+                    P.Carry = true;
+                    break;
+                case "CLI":
+                    len = Opcodes.Flags.CLI.Length;
+                    P.InterruptsDisabled = false;
+                    break;
+                case "SEI":
+                    len = Opcodes.Flags.CLI.Length;
+                    P.InterruptsDisabled = true;
+                    break;
+                case "CLV":
+                    len = Opcodes.Flags.CLV.Length;
+                    P.Overflow = false;
+                    break;
+                case "DEC":
+                case "INC":
+                    len = Opcodes.DEC.Lengths[i];
+                    addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
+                    if (i == Opcodes.DEC.Absolute_X.Opcode || 
+                        i == Opcodes.DEC.ZeroPage_X.Opcode || 
+                        i == Opcodes.INC.Absolute_X.Opcode || 
+                        i == Opcodes.INC.ZeroPage_X.Opcode) addr += X;
+
+                    var op = 1;
+                    if (opcode.OpcodeName == "DEC")
+                        op = -1;
+                    _bus[addr] = (byte)(_bus[addr] + op);
+                    break;
+                case "TXS":
+                    len = 1;
+                    S = X;
+                    break;
+                case "TSX":
+                    len = 1;
+                    X = S;
                     break;
                 default:
                     throw new NotImplementedException("Opcode not implemented");
@@ -343,6 +416,7 @@ namespace FamiMan.Core
                 get => _s[Z];
                 set => _s[Z] = value;
             }
+            public bool InterruptsDisabled { get; internal set; }
         }
     }
 }

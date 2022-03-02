@@ -97,5 +97,62 @@ namespace FamiMan.Core.Tests
             _c.Tick(Opcodes.Branches.BMI.Cycles);
             Assert.Equal(i, _c.PC);
         }
+
+        [Fact]
+        public void BPL_0x10()
+        {
+            byte i = 0;
+            _c.A = 0x05;
+            _c.P.Negative = false;
+            _b.Ram[i++] = Opcodes.Branches.BPL.Opcode;
+            _b.Ram[i++] = 0x0E; // Move PC +14
+            _c.Tick(Opcodes.Branches.BPL.Cycles);
+            Assert.Equal(2 + 14, _c.PC);
+
+            i = (byte)_c.PC;
+            _c.P.Negative = true;
+            _b.Ram[i++] = Opcodes.Branches.BPL.Opcode;
+            _b.Ram[i++] = 0x0E; // Move PC +14
+            _c.Tick(Opcodes.Branches.BPL.Cycles);
+            Assert.Equal(i, _c.PC);
+        }
+
+        [Fact]
+        public void BVC_0x50()
+        {
+            byte i = 0;
+            _c.A = 0x05;
+            _c.P.Overflow = false;
+            _b.Ram[i++] = Opcodes.Branches.BVC.Opcode;
+            _b.Ram[i++] = 0x0E; // Move PC +14
+            _c.Tick(Opcodes.Branches.BVC.Cycles);
+            Assert.Equal(2 + 14, _c.PC);
+
+            i = (byte)_c.PC;
+            _c.P.Overflow = true;
+            _b.Ram[i++] = Opcodes.Branches.BVC.Opcode;
+            _b.Ram[i++] = 0x0E; // Move PC +14
+            _c.Tick(Opcodes.Branches.BVC.Cycles);
+            Assert.Equal(i, _c.PC);
+        }
+
+        [Fact]
+        public void BVS_0x70()
+        {
+            byte i = 0;
+            _c.A = 0x05;
+            _c.P.Overflow = true;
+            _b.Ram[i++] = Opcodes.Branches.BVS.Opcode;
+            _b.Ram[i++] = 0x0E; // Move PC +14
+            _c.Tick(Opcodes.Branches.BVS.Cycles);
+            Assert.Equal(2 + 14, _c.PC);
+
+            i = (byte)_c.PC;
+            _c.P.Overflow = false;
+            _b.Ram[i++] = Opcodes.Branches.BVS.Opcode;
+            _b.Ram[i++] = 0x0E; // Move PC +14
+            _c.Tick(Opcodes.Branches.BVS.Cycles);
+            Assert.Equal(i, _c.PC);
+        }
     }
 }

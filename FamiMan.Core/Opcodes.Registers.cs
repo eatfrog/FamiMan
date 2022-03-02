@@ -74,7 +74,6 @@ namespace FamiMan.Core
                 public const int Length = 1;
                 public const int Cycles = 2;
             }
-
         }
     }
 }

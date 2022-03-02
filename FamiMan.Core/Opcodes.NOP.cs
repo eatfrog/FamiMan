@@ -75,9 +75,9 @@
                 public const int Length = 1;
                 public const int Cycles = 1;
             }
-            public static class NOP_28
+            public static class NOP_82
             {
-                public const byte Opcode = 0x28;
+                public const byte Opcode = 0x82;
                 public const int Length = 1;
                 public const int Cycles = 1;
             }
