@@ -19,6 +19,9 @@ namespace FamiMan.Core
         public byte A = new byte(); // Accumulator
         public byte X = new byte(); // Gen purp reg X
         public byte Y = new byte(); // Gen purp reg Y
+        /// <summary>
+        /// Stack pointer
+        /// </summary>
         public byte S = new byte(); // Stack pointer
 
         /// <summary>
