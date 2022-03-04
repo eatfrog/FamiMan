@@ -27,6 +27,16 @@ namespace FamiMan.Core
         {
             return _opcodes[v];
         }
+
+        public static class BRK
+        {
+            public static class BRK_00
+            {
+                public const byte Opcode = 0x00;
+                public const int Length = 1;
+                public const int Cycles = 1;
+            }
+        }
     }
 
     public class Opcode
@@ -50,4 +60,6 @@ namespace FamiMan.Core
         IndirectIndexed,  // Ptr at addr + offset Y
         None
     }
+
+    
 }

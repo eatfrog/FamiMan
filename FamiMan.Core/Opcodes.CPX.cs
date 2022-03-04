@@ -1,0 +1,54 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+
+namespace FamiMan.Core
+{
+    public static partial class Opcodes
+    {
+        public static class CPX
+        {
+            /*
+                MODE           SYNTAX       HEX LEN TIM
+                Immediate     CPX #$44      $E0  2   2
+                Zero Page     CPX $44       $E4  2   3
+                Absolute      CPX $4400     $EC  3   4
+            */
+            public static Dictionary<byte, int> Lengths;
+
+            public static Dictionary<byte, int> Cycles;
+
+            static CPX()
+            {
+                Lengths = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Length").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
+                Cycles = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Cycles").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
+            }
+
+            public static class Immediate
+            {
+                public const byte Opcode = 0xE0;
+                public const int Cycles = 2;
+                public const int Length = 2;
+                public const MemoryMappingMode Mode = MemoryMappingMode.Immediate;
+            }
+
+            public static class ZeroPage
+            {
+                public const byte Opcode = 0xE4;
+                public const int Length = 2;
+                public const int Cycles = 3;
+                public const MemoryMappingMode Mode = MemoryMappingMode.ZeroPage;
+
+            }
+
+            public static class Absolute
+            {
+                public const byte Opcode = 0xEC;
+                public const int Length = 3;
+                public const int Cycles = 4;
+                public const MemoryMappingMode Mode = MemoryMappingMode.Absolute;
+
+            }
+        }
+    }
+}

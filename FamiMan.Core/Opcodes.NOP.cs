@@ -124,6 +124,14 @@
                 public const int Cycles = 1;
             }
 
+
+            public static class NOP_DC
+            {
+                public const byte Opcode = 0xDC;
+                public const int Length = 1;
+                public const int Cycles = 1;
+            }
+
             public static class NOP_EA
             {
                 public const byte Opcode = 0xEA;

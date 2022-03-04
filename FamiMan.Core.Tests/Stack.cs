@@ -36,5 +36,56 @@ namespace FamiMan.Core.Tests
             _c.Tick(Opcodes.Stack.TSX.Cycles);
             Assert.Equal(0x05, _c.X);
         }
+
+        [Fact]
+        public void PHA_0x48()
+        {
+            byte i = 0;
+            _c.A = 0x05;
+            _c.S = 0x04;
+            _b.Ram[i++] = Opcodes.Stack.PHA.Opcode;
+            _c.Tick(Opcodes.Stack.PHA.Cycles);
+            Assert.Equal(0x05, _b.Ram[0x04]);
+            Assert.Equal(0x03, _c.S);
+        }
+
+        [Fact]
+        public void PLA_0x68()
+        {
+            byte i = 0;
+            _c.S = 0x10;
+            _b.Ram[_c.S] = 0xBC;
+            _b.Ram[i++] = Opcodes.Stack.PLA.Opcode;
+            _c.Tick(Opcodes.Stack.PLA.Cycles);
+            Assert.Equal(0xBC, _c.A);
+            Assert.True(_c.P.Negative);
+            Assert.Equal(0x11, _c.S);
+        }
+
+        [Fact]
+        public void PHP_0x08()
+        {
+            byte i = 0;
+            _c.P.Negative = true;
+            _c.P.Zero = true;
+            _c.S = 0x04;
+            _b.Ram[i++] = Opcodes.Stack.PHP.Opcode;
+            _c.Tick(Opcodes.Stack.PHP.Cycles);
+            Assert.Equal(0x82, _b.Ram[0x04]);
+            Assert.Equal(0x03, _c.S);
+        }
+
+        [Fact]
+        public void PLP_0x28()
+        {
+            byte i = 0;
+            _c.S = 0x10;
+            _b.Ram[_c.S] = 0x82;
+            _b.Ram[i++] = Opcodes.Stack.PLP.Opcode;
+            _c.Tick(Opcodes.Stack.PLP.Cycles);
+            Assert.True(_c.P.Negative);
+            Assert.True(_c.P.Zero);
+            Assert.Equal(0x11, _c.S);
+        }
     }
 }

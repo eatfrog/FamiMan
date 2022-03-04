@@ -26,6 +26,8 @@ namespace FamiMan.Core
 
         public static bool IsNop(this Opcode t) => t.OpcodeName == "NOP";
 
+        public static bool IsBrk(this Opcode t) => t.OpcodeName == "BRK" || t.OpcodeName == "BRK_00";
+
         public static MemoryMappingMode GetMemoryMappingMode(this Type t)
         {
             var temp = t.GetField("Mode");
