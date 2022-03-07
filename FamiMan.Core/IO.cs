@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Text;
 
 namespace FamiMan.Core
@@ -12,7 +13,10 @@ namespace FamiMan.Core
         public IO(Bus b)
         {
             _b = b;
+            PRGROM = new byte[1000];
         }
+
+        public byte[] PRGROM;
 
         public void LoadProgramFromByteArray(byte[] program, byte startLoc)
         {
@@ -25,6 +29,7 @@ namespace FamiMan.Core
 
         public void LoadProgramFromHexString(string hexString, byte startLoc)
         {
+            hexString = hexString.Replace(" ", "");
             if (hexString.Length % 2 != 0)
             {
                 throw new ArgumentException(string.Format(CultureInfo.InvariantCulture, "The binary key cannot have an odd number of digits: {0}", hexString));
@@ -38,6 +43,12 @@ namespace FamiMan.Core
             }
 
             LoadProgramFromByteArray(data, startLoc);
+        }
+
+        public Rom LoadINesRomFile(string path)
+        {
+            if (!File.Exists(path)) throw new FileNotFoundException($"Rom file {path} not found", path);
+            return new Rom { Length = new FileInfo(path).Length, Type = RomType.INES };
         }
     }
 }

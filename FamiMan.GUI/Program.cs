@@ -1,8 +1,8 @@
 ﻿using FamiMan.Core;
 using SDL2;
-using System.Reflection;
+using static SDL2.SDL;
 
-if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) < 0)
+if (SDL_Init(SDL_INIT_VIDEO) < 0)
 {
     Console.WriteLine("Unable to init sdl");
     return;
@@ -12,11 +12,9 @@ SDL_ttf.TTF_Init();
 
 var window = IntPtr.Zero;
 var renderer = IntPtr.Zero;
-//window = SDL.SDL_CreateWindow("Window", SDL.SDL_WINDOWPOS_CENTERED, SDL.SDL_WINDOWPOS_CENTERED, 500, 500, SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE);
-//renderer = SDL.SDL_CreateRenderer(window, 0, SDL.SDL_RendererFlags.SDL_RENDERER_ACCELERATED);
 
-SDL.SDL_CreateWindowAndRenderer(500, 500, SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE, out window, out renderer);
-SDL.SDL_Event e;
+SDL.SDL_CreateWindowAndRenderer(800, 800, SDL.SDL_WindowFlags.SDL_WINDOW_RESIZABLE, out window, out renderer);
+SDL_Event e;
 bool quit = false;
 SDL.SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
 SDL.SDL_RenderClear(renderer);
@@ -26,8 +24,12 @@ var r = new Random();
 var b = new Bus();
 var c = new Cpu(b);
 var io = new IO(b);
-io.LoadProgramFromHexString("A9448544E644A22D4C0000", 0);
+io.LoadProgramFromHexString("A9448544E644C544A22DE646A4464C0000", 0);
 c.S = 0xFF;
+//this opens a font style and sets a size
+IntPtr font = SDL_ttf.TTF_OpenFont("c:\\windows\\fonts\\arial.ttf", 24);
+SDL_Color white = new SDL_Color { r = 255, g = 255, b = 255 };
+SDL_Rect message_rect = new(); //create a rect
 
 while (!quit)
 {
@@ -38,13 +40,13 @@ while (!quit)
     {
         switch (e.type)
         {
-            case SDL.SDL_EventType.SDL_QUIT:
+            case SDL_EventType.SDL_QUIT:
                 quit = true;
                 break;
-            case SDL.SDL_EventType.SDL_KEYDOWN:
+            case SDL_EventType.SDL_KEYDOWN:
                 switch (e.key.keysym.sym)
                 {
-                    case SDL.SDL_Keycode.SDLK_q:
+                    case SDL_Keycode.SDLK_q:
                         quit = true;
                         break;
                 }
@@ -62,17 +64,19 @@ while (!quit)
     var memVal = b.Ram[0x044];
     SDL.SDL_SetRenderDrawColor(renderer, memVal, 50, 50 , 255);
     SDL.SDL_RenderDrawPoint(renderer, 2, 2);
-    WriteText("PC: " + c.PC);
+    WriteText(message_rect, font, white, "PC: " + c.PC, 0);
+    WriteText(message_rect, font, white, "A: " + c.A, 1);
+    WriteText(message_rect, font, white, "X: " + c.X, 2);
+    WriteText(message_rect, font, white, "Y: " + c.Y, 3);
+    WriteText(message_rect, font, white, "S: " + c.S, 4);
+    WriteText(message_rect, font, white, "P: " + c.P.AsByte(), 5);
+
     SDL.SDL_RenderPresent(renderer);
     c.Tick();
 }
 
-void WriteText(string text)
+void WriteText(SDL_Rect rect, IntPtr font, SDL_Color color, string text, int row)
 {
-    string execPath = AppDomain.CurrentDomain.BaseDirectory;
-
-    //this opens a font style and sets a size
-    IntPtr font = SDL_ttf.TTF_OpenFont("c:\\windows\\fonts\\arial.ttf", 24);
 
     if (font == IntPtr.Zero)
     {
@@ -81,23 +85,22 @@ void WriteText(string text)
     // this is the color in rgb format,
     // maxing out all would give you the color white,
     // and it will be your text's color
-    SDL.SDL_Color White = new SDL.SDL_Color{ r = 255, g = 255, b = 255 };
 
     // as TTF_RenderText_Solid could only be used on
     // SDL_Surface then you have to create the surface first
     IntPtr surfaceMessage =
-        SDL_ttf.TTF_RenderText_Solid(font, text, White);
+        SDL_ttf.TTF_RenderText_Solid(font, text, color);
 
     // now you can convert it into a texture
     IntPtr Message = SDL.SDL_CreateTextureFromSurface(renderer, surfaceMessage);
 
-    SDL.SDL_Rect Message_rect; //create a rect
-    Message_rect.x = 15;  //controls the rect's x coordinate 
-    Message_rect.y = 15; // controls the rect's y coordinte
-    Message_rect.w = 200; // controls the width of the rect
-    Message_rect.h = 100; // controls the height of the rect
+    rect.x = 15;  //controls the rect's x coordinate 
+    rect.y = 15 + (60 * row); // controls the rect's y coordinte
+    rect.w = 150; // controls the width of the rect
+    rect.h = 50; // controls the height of the rect
 
-    SDL.SDL_Rect temp;
+
+    SDL_Rect temp;
     temp.x = 0;
     temp.y = 0;
     temp.w = 200;
@@ -113,9 +116,9 @@ void WriteText(string text)
     // the crop size (you can ignore this if you don't want
     // to dabble with cropping), and the rect which is the size
     // and coordinate of your texture
-    SDL.SDL_RenderCopy(renderer, Message, ref temp, ref Message_rect);
+    SDL.SDL_RenderCopy(renderer, Message, ref temp, ref rect);
 }
 
 SDL.SDL_DestroyRenderer(renderer);
 SDL.SDL_DestroyWindow(window);
-SDL.SDL_Quit();
+SDL_Quit();

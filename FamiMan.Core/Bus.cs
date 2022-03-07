@@ -11,11 +11,25 @@ namespace FamiMan.Core
             Ram = new Ram(2 * 1024);
             Cpu = new Cpu(this);
             Ppu = new Ppu(this);
+            IO = new IO(this);
+        }
+
+        public void Clock()
+        {
+            throw new NotImplementedException();
+        }
+
+        public void Reset()
+        {
+            Cpu.Reset();
+            // TODO: reset memory and interrupts etc
         }
 
         public Ram Ram { get; set; }
         public Cpu Cpu { get; set; }
         public Ppu Ppu { get; set; }
+
+        public IO IO { get; set; }
 
         public ref byte this[ushort index]
         {
@@ -29,6 +43,16 @@ namespace FamiMan.Core
                 // 08xx, 10xx, 18xx are mirrors
                 if (index >= 0 && index < 0x7FF)
                     return ref Ram.AsSpan()[index];
+                else if (index >= 0x800 && index <= 0xFFF)
+                    return ref Ram.AsSpan()[index - 0x800];
+                else if (index >= 0x1000 && index <= 0x17FF)
+                    return ref Ram.AsSpan()[index - 0x1000];
+                else if (index >= 0x1800 && index <= 0x1FFF)
+                    return ref Ram.AsSpan()[index - 0x1800];
+                else if (index == 0x2000)
+                    return ref Ppu.Registers;
+                else if (index >= 0x8000 && index <= 0xFFFF)
+                    return ref IO.PRGROM[index];
                 else
                     throw new NotImplementedException("Not done");
 

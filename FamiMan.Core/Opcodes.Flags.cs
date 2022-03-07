@@ -25,6 +25,7 @@ namespace FamiMan.Core
                 public const int Length = 1;
                 public const int Cycles = 2;
             }
+
             public static class SEC
             {
                 public const byte Opcode = 0x38;
@@ -49,6 +50,13 @@ namespace FamiMan.Core
             public static class CLV
             {
                 public const byte Opcode = 0xB8;
+                public const int Length = 1;
+                public const int Cycles = 2;
+            }
+
+            public static class CLD
+            {
+                public const byte Opcode = 0xD8;
                 public const int Length = 1;
                 public const int Cycles = 2;
             }

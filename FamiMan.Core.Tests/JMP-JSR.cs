@@ -47,12 +47,14 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.S = 0x10;
+            _b.Ram[i++] = Opcodes.NOP.NOP_14.Opcode;
+            _c.Tick(1);
             _b.Ram[i++] = Opcodes.JSR.Absolute.Opcode;
             _b.Ram[i++] = 0x10;
             _b.Ram[i++] = 0x01; // Jump to 0x110
             _c.Tick(Opcodes.JSR.Absolute.Cycles);
             Assert.Equal(0x110, _c.PC);
-            Assert.Equal(3, _b.Ram[(byte)(_c.S + 1)]);
+            Assert.Equal(4, _b.Ram[(byte)(_c.S + 2)]);
         }
 
     }

@@ -45,6 +45,11 @@ namespace FamiMan.Core
         private bool _waiting = false;
         private bool _breaked = false;
 
+        public void Reset()
+        {
+            throw new NotImplementedException();
+        }
+
         public void Tick()
         {
             _ticks++;
@@ -344,6 +349,10 @@ namespace FamiMan.Core
                     len = Opcodes.Flags.CLV.Length;
                     P.Overflow = false;
                     break;
+                case "CLD":
+                    len = 0;
+                    // NOP
+                    break;
                 case "DEC":
                 case "INC":
                     len = Opcodes.DEC.Lengths[i];
@@ -395,15 +404,21 @@ namespace FamiMan.Core
                         addr = Get16bitAbsoluteAdress(addr);
                         if (opcode.OpcodeVersionName == "Indirect")
                             addr = Get16bitAbsoluteAdress(addr);
+                        PC += 3;
                         if (opcode.OpcodeName == "JSR")
-                            _bus[S--] = (byte)(PC + 3);
+                        {
+                            _bus[S--] = (byte)PC;
+                            _bus[S--] = (byte)(PC >> 8);
+                        }
                         PC = addr;
                         break;
                     }
                 case "RTS":
                     {
                         len = 0;
-                        PC = _bus[++S];
+                        ushort high = ++S;
+                        ushort low = ++S;
+                        PC = BitConverter.ToUInt16(new byte[2] { _bus[low], _bus[high] }, 0);
                         break;
                     }
                 default:
