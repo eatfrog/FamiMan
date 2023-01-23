@@ -4,14 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using static FamiMan.Core.Opcodes;
 
-namespace FamiMan.Core.Tests
+namespace FamiMan.Core.Tests.Opcodes
 {
-    public class Registers
+    public class RegistersTests
     {
         private Bus _b;
         private Cpu _c;
-        public Registers()
+        public RegistersTests()
         {
             _b = new Bus();
             _c = new Cpu(_b);
@@ -22,8 +23,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.A = 0x14;
-            _b.Ram[i++] = Opcodes.Registers.TAX.Opcode;
-            _c.Tick(Opcodes.Registers.TAX.Cycles);
+            _b.Ram[i++] = Registers.TAX.Opcode;
+            _c.Tick(Registers.TAX.Cycles);
 
             Assert.Equal(0x14, _c.X);
         }
@@ -33,8 +34,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.X = 0x14;
-            _b.Ram[i++] = Opcodes.Registers.TXA.Opcode;
-            _c.Tick(Opcodes.Registers.TXA.Cycles);
+            _b.Ram[i++] = Registers.TXA.Opcode;
+            _c.Tick(Registers.TXA.Cycles);
 
             Assert.Equal(0x14, _c.A);
         }
@@ -44,8 +45,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.X = 0x14;
-            _b.Ram[i++] = Opcodes.Registers.INX.Opcode;
-            _c.Tick(Opcodes.Registers.INX.Cycles);
+            _b.Ram[i++] = Registers.INX.Opcode;
+            _c.Tick(Registers.INX.Cycles);
 
             Assert.Equal(0x15, _c.X);
         }
@@ -55,8 +56,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.X = 0x14;
-            _b.Ram[i++] = Opcodes.Registers.DEX.Opcode;
-            _c.Tick(Opcodes.Registers.DEX.Cycles);
+            _b.Ram[i++] = Registers.DEX.Opcode;
+            _c.Tick(Registers.DEX.Cycles);
 
             Assert.Equal(0x13, _c.X);
         }
@@ -66,8 +67,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.A = 0x14;
-            _b.Ram[i++] = Opcodes.Registers.TAY.Opcode;
-            _c.Tick(Opcodes.Registers.TAY.Cycles);
+            _b.Ram[i++] = Registers.TAY.Opcode;
+            _c.Tick(Registers.TAY.Cycles);
 
             Assert.Equal(0x14, _c.Y);
         }
@@ -77,8 +78,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.Y = 0x14;
-            _b.Ram[i++] = Opcodes.Registers.TYA.Opcode;
-            _c.Tick(Opcodes.Registers.TYA.Cycles);
+            _b.Ram[i++] = Registers.TYA.Opcode;
+            _c.Tick(Registers.TYA.Cycles);
 
             Assert.Equal(0x14, _c.A);
         }
@@ -88,8 +89,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.Y = 0x14;
-            _b.Ram[i++] = Opcodes.Registers.INY.Opcode;
-            _c.Tick(Opcodes.Registers.INY.Cycles);
+            _b.Ram[i++] = Registers.INY.Opcode;
+            _c.Tick(Registers.INY.Cycles);
 
             Assert.Equal(0x15, _c.Y);
         }
@@ -99,8 +100,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.Y = 0x14;
-            _b.Ram[i++] = Opcodes.Registers.DEY.Opcode;
-            _c.Tick(Opcodes.Registers.DEY.Cycles);
+            _b.Ram[i++] = Registers.DEY.Opcode;
+            _c.Tick(Registers.DEY.Cycles);
 
             Assert.Equal(0x13, _c.Y);
         }

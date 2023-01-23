@@ -4,14 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using static FamiMan.Core.Opcodes;
 
-namespace FamiMan.Core.Tests
+namespace FamiMan.Core.Tests.Opcodes
 {
-    public class Stack
+    public class StackTests
     {
         private Bus _b;
         private Cpu _c;
-        public Stack()
+        public StackTests()
         {
             _b = new Bus();
             _c = new Cpu(_b);
@@ -22,8 +23,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.X = 0x05;
-            _b.Ram[i++] = Opcodes.Stack.TXS.Opcode;
-            _c.Tick(Opcodes.Stack.TXS.Cycles);
+            _b.Ram[i++] = Stack.TXS.Opcode;
+            _c.Tick(Stack.TXS.Cycles);
             Assert.Equal(0x05, _c.S);
         }
 
@@ -32,8 +33,8 @@ namespace FamiMan.Core.Tests
         {
             byte i = 0;
             _c.S = 0x05;
-            _b.Ram[i++] = Opcodes.Stack.TSX.Opcode;
-            _c.Tick(Opcodes.Stack.TSX.Cycles);
+            _b.Ram[i++] = Stack.TSX.Opcode;
+            _c.Tick(Stack.TSX.Cycles);
             Assert.Equal(0x05, _c.X);
         }
 
@@ -43,8 +44,8 @@ namespace FamiMan.Core.Tests
             byte i = 0;
             _c.A = 0x05;
             _c.S = 0x04;
-            _b.Ram[i++] = Opcodes.Stack.PHA.Opcode;
-            _c.Tick(Opcodes.Stack.PHA.Cycles);
+            _b.Ram[i++] = Stack.PHA.Opcode;
+            _c.Tick(Stack.PHA.Cycles);
             Assert.Equal(0x05, _b.Ram[0x04]);
             Assert.Equal(0x03, _c.S);
         }
@@ -55,8 +56,8 @@ namespace FamiMan.Core.Tests
             byte i = 0;
             _c.S = 0x10;
             _b.Ram[_c.S] = 0xBC;
-            _b.Ram[i++] = Opcodes.Stack.PLA.Opcode;
-            _c.Tick(Opcodes.Stack.PLA.Cycles);
+            _b.Ram[i++] = Stack.PLA.Opcode;
+            _c.Tick(Stack.PLA.Cycles);
             Assert.Equal(0xBC, _c.A);
             Assert.True(_c.P.Negative);
             Assert.Equal(0x11, _c.S);
@@ -69,8 +70,8 @@ namespace FamiMan.Core.Tests
             _c.P.Negative = true;
             _c.P.Zero = true;
             _c.S = 0x04;
-            _b.Ram[i++] = Opcodes.Stack.PHP.Opcode;
-            _c.Tick(Opcodes.Stack.PHP.Cycles);
+            _b.Ram[i++] = Stack.PHP.Opcode;
+            _c.Tick(Stack.PHP.Cycles);
             Assert.Equal(0x82, _b.Ram[0x04]);
             Assert.Equal(0x03, _c.S);
         }
@@ -81,8 +82,8 @@ namespace FamiMan.Core.Tests
             byte i = 0;
             _c.S = 0x10;
             _b.Ram[_c.S] = 0x82;
-            _b.Ram[i++] = Opcodes.Stack.PLP.Opcode;
-            _c.Tick(Opcodes.Stack.PLP.Cycles);
+            _b.Ram[i++] = Stack.PLP.Opcode;
+            _c.Tick(Stack.PLP.Cycles);
             Assert.True(_c.P.Negative);
             Assert.True(_c.P.Zero);
             Assert.Equal(0x11, _c.S);

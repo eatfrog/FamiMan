@@ -4,14 +4,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Xunit;
+using static FamiMan.Core.Opcodes;
 
-namespace FamiMan.Core.Tests
+namespace FamiMan.Core.Tests.Opcodes
 {
-    public class Flags
+    public class FlagsTests
     {
         private Bus _b;
         private Cpu _c;
-        public Flags()
+        public FlagsTests()
         {
             _b = new Bus();
             _c = new Cpu(_b);
@@ -22,8 +23,8 @@ namespace FamiMan.Core.Tests
         {
             _c.P.Carry = true;
             byte i = 0;
-            _b.Ram[i++] = Opcodes.Flags.CLC.Opcode;
-            _c.Tick(Opcodes.Flags.CLC.Cycles);
+            _b.Ram[i++] = Flags.CLC.Opcode;
+            _c.Tick(Flags.CLC.Cycles);
             Assert.False(_c.P.Carry);
         }
 

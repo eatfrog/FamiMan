@@ -25,6 +25,7 @@ namespace FamiMan.Core.Tests
         public void LoadINesRom()
         {
             var rom = _io.LoadINesRomFile(Directory.GetCurrentDirectory() + "\\test.nes");
+            Assert.NotNull(rom);
         }
     }
 }

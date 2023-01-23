@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net6.0-windows</TargetFramework>
@@ -23,6 +23,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\FamiMan.Core\FamiMan.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Files\test.nes">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

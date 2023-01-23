@@ -543,6 +543,16 @@ namespace FamiMan.Core
                 // reverse the array
                 Array.Reverse(_s);
             }
+
+            public void InterruptTriggered(InterruptType type)
+            {
+                if (type == InterruptType.NMI || !InterruptsDisabled)
+                {
+                    // Todo: Trigger interrupt
+                    return;
+                }
+
+            }
         }
     }
 }
