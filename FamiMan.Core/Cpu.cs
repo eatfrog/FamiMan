@@ -243,28 +243,24 @@ namespace FamiMan.Core
                 case "BVC":
                 case "BVS":
                     {
-                        int jmpRel = _bus[addr] > 127 ? (255 - _bus[addr]) * -1 : _bus[addr];
-                        int jmpTo = PC + jmpRel - 1; // FIXME: why off by one?
-
+                        int jmpRel = _bus[addr] > 127 ? (_bus[addr] - 255): _bus[addr];
                         len = Opcodes.Branches.BCC.Length;
+                        int jmpTo = (int)PC + jmpRel - len + 1; // FIXME: len is added at the bottom of this, remove it here
+
                         var temp = P.Carry;
                         if ((i == Opcodes.Branches.BCC.Opcode && !temp) ||
                             (i == Opcodes.Branches.BCS.Opcode && temp)) PC += _bus[addr];
 
-                        if (i == Opcodes.Branches.BEQ.Opcode && P.Zero)
-                            PC = (ushort) jmpTo;
-                        else if (i == Opcodes.Branches.BNE.Opcode && !P.Zero)
-                            PC = (ushort)jmpTo;
-                        else if (i == Opcodes.Branches.BMI.Opcode && P.Negative)
-                            PC = (ushort)jmpTo;
-                        else if (i == Opcodes.Branches.BPL.Opcode && !P.Negative)
-                            PC = (ushort)jmpTo;
-                        else if (i == Opcodes.Branches.BVC.Opcode && !P.Overflow)
-                            PC = (ushort)jmpTo;
-                        else if (i == Opcodes.Branches.BVS.Opcode && P.Overflow)
-                            PC = (ushort)jmpTo;
+                        if ((i == Opcodes.Branches.BEQ.Opcode && P.Zero) ||
+                            (i == Opcodes.Branches.BNE.Opcode && !P.Zero) ||
+                            (i == Opcodes.Branches.BMI.Opcode && P.Negative) ||
+                            (i == Opcodes.Branches.BPL.Opcode && !P.Negative) ||
+                            (i == Opcodes.Branches.BVC.Opcode && !P.Overflow) ||
+                            (i == Opcodes.Branches.BVS.Opcode && P.Overflow))
+                        {
+                            PC = (ushort)(jmpTo);
+                        }
                         P.Carry = temp;
-
 
                         break;
                     }
@@ -278,11 +274,23 @@ namespace FamiMan.Core
                     if (i == Opcodes.LDA.Absolute_Y.Opcode || i == Opcodes.LDX.Absolute_Y.Opcode) addr += Y;
 
                     if (opcode.OpcodeName == "LDA")
+                    {
                         A = _bus[addr];
+                        P.Zero = A == 0;
+                        P.Negative = A > 127;
+                    }
                     else if (opcode.OpcodeName == "LDX")
+                    {
                         X = _bus[addr];
+                        P.Zero = X == 0;
+                        P.Negative = Y > 127;
+                    }
                     else if (opcode.OpcodeName == "LDY")
+                    {
                         Y = _bus[addr];
+                        P.Zero = Y == 0;
+                        P.Negative = Y > 127;
+                    }
                     break;
                 case "STA":
                     len = Opcodes.STA.Lengths[i];

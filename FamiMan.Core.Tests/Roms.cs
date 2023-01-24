@@ -27,11 +27,7 @@ namespace FamiMan.Core.Tests
             var rom = _io.LoadINesRomFile(Directory.GetCurrentDirectory() + "\\files\\test.nes");
             Assert.NotNull(rom);
             _b.Reset();
-            _c.Tick();
-            _c.Tick();
-            _c.Tick();
-            _c.Tick();
-            _c.Tick();
+            for (int i = 0; i < 100; i++) { _c.Tick(); }
             Assert.False(_c.P.Break, "CPU has breaked");
         }
     }

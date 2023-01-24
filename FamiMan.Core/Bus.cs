@@ -43,6 +43,8 @@ namespace FamiMan.Core
         public Cpu Cpu { get; set; }
         public Ppu Ppu { get; set; }
 
+        public Apu Apu { get; set; }
+
         public IO IO { get; set; }
 
         public ref byte this[ushort index]
@@ -63,8 +65,8 @@ namespace FamiMan.Core
                     return ref Ram.AsSpan()[index - 0x1000];
                 else if (index >= 0x1800 && index <= 0x1FFF)
                     return ref Ram.AsSpan()[index - 0x1800];
-                else if (index == 0x2000)
-                    return ref Ppu.Registers;
+                else if (index >= 0x2000 && index <= 0x2007)
+                    return ref Ppu.Registers[index];
                 else if (index >= 0x8000 && index <= 0xFFFF)
                 {
                     if (IO.PRGROM.Length < index)
@@ -78,20 +80,20 @@ namespace FamiMan.Core
                 }
                 else
                 {
-                    Console.WriteLine("Access to not implemented memory area");
+                    Console.WriteLine("Access to not implemented memory area: " + index.ToString("X"));
                     return ref Ram.AsSpan()[0];
                     //throw new NotImplementedException("Not done");
                 }
 
 
-                /*  $2000 - $2007                 8 bytes                 Input / Output registers
-                    $4000 - $401F                 32 bytes Input / Output registers
-                    $6000 - $7FFF                 8192 bytes         SRAM - Save Ram used to save data between game plays.
-                    $8000 - $BFFF                 16384 bytes         PRG-ROM lower bank - executable code
-                    $C000 - $FFFF                 16384 bytes         PRG-ROM upper bank - executable code
-                    $FFFA - $FFFB         2 bytes                 Address of Non Maskable Interrupt (NMI) handler routine
-                    $FFFC - $FFFD         2 bytes                 Address of Power on reset handler routine
-                    $FFFE - $FFFF                 2 bytes                 Address of Break (BRK instruction) handler routine
+                /*  $2000 - $2007         8 bytes       Input / Output registers
+                    $4000 - $401F         32 bytes      NES PPU Input / Output registers
+                    $6000 - $7FFF         8192 bytes    SRAM - Save Ram used to save data between game plays.
+                    $8000 - $BFFF         16384 bytes   PRG-ROM lower bank - executable code
+                    $C000 - $FFFF         16384 bytes   PRG-ROM upper bank - executable code
+                    $FFFA - $FFFB         2 bytes       Address of Non Maskable Interrupt (NMI) handler routine
+                    $FFFC - $FFFD         2 bytes       Address of Power on reset handler routine
+                    $FFFE - $FFFF         2 bytes       Address of Break (BRK instruction) handler routine
                 */
             }
             //set

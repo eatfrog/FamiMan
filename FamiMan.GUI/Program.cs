@@ -63,7 +63,7 @@ internal class Program
             var memVal = b.Ram[0x044];
             SDL_SetRenderDrawColor(renderer, memVal, 50, 50, 255);
             SDL_RenderDrawPoint(renderer, 2, 2);
-            WriteText(message_rect, font, white, "PC: " + c.PC, 0);
+            WriteText(message_rect, font, white, "PC: " + c.PC.ToString("X"), 0);
             WriteText(message_rect, font, white, "A: " + c.A, 1);
             WriteText(message_rect, font, white, "X: " + c.X, 2);
             WriteText(message_rect, font, white, "Y: " + c.Y, 3);
@@ -88,10 +88,10 @@ internal class Program
             // as TTF_RenderText_Solid could only be used on
             // SDL_Surface then you have to create the surface first
             IntPtr surfaceMessage =
-                SDL_ttf.TTF_RenderText_Solid(font, text, color);
+                SDL_ttf.TTF_RenderUTF8_Solid(font, text, color);
 
             // now you can convert it into a texture
-            IntPtr Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+            IntPtr messageTexture = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
 
             rect.x = 15;  //controls the rect's x coordinate 
             rect.y = 15 + 60 * row; // controls the rect's y coordinte
@@ -115,7 +115,9 @@ internal class Program
             // the crop size (you can ignore this if you don't want
             // to dabble with cropping), and the rect which is the size
             // and coordinate of your texture
-            SDL_RenderCopy(renderer, Message, ref temp, ref rect);
+            SDL_RenderCopy(renderer, messageTexture, ref temp, ref rect);
+            SDL_DestroyTexture(messageTexture);
+            SDL_FreeSurface(surfaceMessage);
         }
 
         SDL_DestroyRenderer(renderer);
@@ -129,7 +131,7 @@ internal class Program
 
         //io.LoadProgramFromHexString("A9448544E644C544A22DE646A4464C0000", 0);
         //c.S = 0xFF;
-        var rom = b.IO.LoadINesRomFile(Directory.GetCurrentDirectory() + "\\files\\test.nes");
+        var rom = b.IO.LoadINesRomFile(Directory.GetCurrentDirectory() + "\\files\\test2.nes");
         b.Cpu.Reset();
         return b;
     }
