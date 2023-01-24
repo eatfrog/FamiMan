@@ -49,6 +49,13 @@ namespace FamiMan.Core.Tests.Opcodes
             _c.Tick(Registers.INX.Cycles);
 
             Assert.Equal(0x15, _c.X);
+
+            _c.X = 0xFF;
+            _b.Ram[i++] = Registers.INX.Opcode;
+            _c.Tick(Registers.INX.Cycles);
+
+            Assert.Equal(0x00, _c.X);
+            Assert.True(_c.P.Zero);
         }
 
         [Fact]
@@ -60,6 +67,13 @@ namespace FamiMan.Core.Tests.Opcodes
             _c.Tick(Registers.DEX.Cycles);
 
             Assert.Equal(0x13, _c.X);
+
+            _c.X = 0x01;
+            _b.Ram[i++] = Registers.DEX.Opcode;
+            _c.Tick(Registers.DEX.Cycles);
+
+            Assert.Equal(0x00, _c.X);
+            Assert.True(_c.P.Zero);
         }
 
         [Fact]

@@ -23,8 +23,8 @@ internal class Program
         SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
 
         Bus b;
-        Cpu c;
-        SetupNes(out b, out c);
+        b = SetupNes();
+        var c = b.Cpu;
         //this opens a font style and sets a size
         IntPtr font = SDL_ttf.TTF_OpenFont("c:\\windows\\fonts\\arial.ttf", 24);
         SDL_Color white = new SDL_Color { r = 255, g = 255, b = 255 };
@@ -123,12 +123,14 @@ internal class Program
         SDL_Quit();
     }
 
-    private static void SetupNes(out Bus b, out Cpu c)
+    private static Bus SetupNes()
     {
-        b = new Bus();
-        c = new Cpu(b);
-        var io = new IO(b);
-        io.LoadProgramFromHexString("A9448544E644C544A22DE646A4464C0000", 0);
-        c.S = 0xFF;
+        var b = new Bus();
+
+        //io.LoadProgramFromHexString("A9448544E644C544A22DE646A4464C0000", 0);
+        //c.S = 0xFF;
+        var rom = b.IO.LoadINesRomFile(Directory.GetCurrentDirectory() + "\\files\\test.nes");
+        b.Cpu.Reset();
+        return b;
     }
 }

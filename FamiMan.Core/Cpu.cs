@@ -47,7 +47,17 @@ namespace FamiMan.Core
 
         public void Reset()
         {
-            throw new NotImplementedException();
+            P.InterruptsDisabled = true;
+            A = 0;
+            X = 0;
+            Y = 0;
+
+            // Stack pointer
+            S = 0xFD;
+
+            // $fffc-$fffd	Start of reset handler
+            PC = (ushort)(_bus[0xfffc] + (_bus[(ushort)(0xfffd)] << 8));
+
         }
 
         public void Tick()
@@ -66,6 +76,7 @@ namespace FamiMan.Core
                 if (opcode.IsBrk())
                 {
                     _breaked = true;
+                    P.Break = true;
                     return;
                 }
                 _nextInstruction = opcode.Cycles - 1;
@@ -232,23 +243,26 @@ namespace FamiMan.Core
                 case "BVC":
                 case "BVS":
                     {
+                        int jmpRel = _bus[addr] > 127 ? (255 - _bus[addr]) * -1 : _bus[addr];
+                        int jmpTo = PC + jmpRel;
+
                         len = Opcodes.Branches.BCC.Length;
                         var temp = P.Carry;
                         if ((i == Opcodes.Branches.BCC.Opcode && !temp) ||
                             (i == Opcodes.Branches.BCS.Opcode && temp)) PC += _bus[addr];
 
                         if (i == Opcodes.Branches.BEQ.Opcode && P.Zero)
-                            PC += _bus[addr];
+                            PC = (ushort) jmpTo;
                         else if (i == Opcodes.Branches.BNE.Opcode && !P.Zero)
-                            PC += _bus[addr];
+                            PC = (ushort)jmpTo;
                         else if (i == Opcodes.Branches.BMI.Opcode && P.Negative)
-                            PC += _bus[addr];
+                            PC = (ushort)jmpTo;
                         else if (i == Opcodes.Branches.BPL.Opcode && !P.Negative)
-                            PC += _bus[addr];
+                            PC = (ushort)jmpTo;
                         else if (i == Opcodes.Branches.BVC.Opcode && !P.Overflow)
-                            PC += _bus[addr];
+                            PC = (ushort)jmpTo;
                         else if (i == Opcodes.Branches.BVS.Opcode && P.Overflow)
-                            PC += _bus[addr];
+                            PC = (ushort)jmpTo;
                         P.Carry = temp;
                         break;
                     }
@@ -308,10 +322,16 @@ namespace FamiMan.Core
                 case "DEX":
                     len = Opcodes.Registers.DEX.Length;
                     X--;
+                    if (X == 0)
+                        P.Zero = true;
+                    else P.Zero = false;
                     break;
                 case "INX":
                     len = Opcodes.Registers.INX.Length;
                     X++;
+                    if (X == 0)
+                        P.Zero = true;
+                    else P.Zero = false;
                     break;
                 case "TAY":
                     len = Opcodes.Registers.TAY.Length;
@@ -324,10 +344,16 @@ namespace FamiMan.Core
                 case "DEY":
                     len = Opcodes.Registers.DEY.Length;
                     Y--;
+                    if (Y == 0)
+                        P.Zero = true;
+                    else P.Zero = false;
                     break;
                 case "INY":
                     len = Opcodes.Registers.INY.Length;
                     Y++;
+                    if (Y == 0)
+                        P.Zero = true;
+                    else P.Zero = false;
                     break;
                 case "CLC":
                     len = Opcodes.Flags.CLC.Length;
@@ -350,7 +376,7 @@ namespace FamiMan.Core
                     P.Overflow = false;
                     break;
                 case "CLD":
-                    len = 0;
+                    len = Opcodes.Flags.CLD.Length;
                     // NOP
                     break;
                 case "DEC":
@@ -516,6 +542,12 @@ namespace FamiMan.Core
             {
                 get => _s[INTERRUPTS];
                 set => _s[INTERRUPTS] = value;
+            }
+
+            public bool Break
+            {
+                get => _s[BREAK];
+                set => _s[BREAK] = value;
             }
 
             public byte AsByte()

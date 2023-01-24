@@ -22,6 +22,20 @@ namespace FamiMan.Core
         public void Reset()
         {
             Cpu.Reset();
+
+            // TODO
+            //this[0x4017] = 0; // frame irq enabled
+            //this[0x4015] = 0; // all channels disabled
+
+            //for (ushort i = 0x4000; i < 0x4014; i++)
+            //{
+            //    this[i] = 0;
+            //}
+
+            var ram = Ram.AsSpan();
+            for (int i = 0; i < ram.Length; i++)
+                ram[i] = i % 2 == 0 ? (byte)0x00 : (byte)0xFF;
+
             // TODO: reset memory and interrupts etc
         }
 
@@ -52,9 +66,23 @@ namespace FamiMan.Core
                 else if (index == 0x2000)
                     return ref Ppu.Registers;
                 else if (index >= 0x8000 && index <= 0xFFFF)
+                {
+                    if (IO.PRGROM.Length < index)
+                    {
+                        int timesMirrored = index / IO.PRGROM.Length;
+                        int realIndex = index - (IO.PRGROM.Length * timesMirrored);
+                        return ref IO.PRGROM[realIndex + 1]; // FIXME: why +1?
+                    }
+
                     return ref IO.PRGROM[index];
+                }
                 else
-                    throw new NotImplementedException("Not done");
+                {
+                    Console.WriteLine("Access to not implemented memory area");
+                    return ref Ram.AsSpan()[0];
+                    //throw new NotImplementedException("Not done");
+                }
+
 
                 /*  $2000 - $2007                 8 bytes                 Input / Output registers
                     $4000 - $401F                 32 bytes Input / Output registers

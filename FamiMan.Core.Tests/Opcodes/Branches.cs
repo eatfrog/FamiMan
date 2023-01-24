@@ -78,6 +78,13 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BCS.Cycles);
             Assert.Equal(i, _c.PC);
+
+            i = (byte)_c.PC;
+            _c.P.Zero = false;
+            _b.Ram[i++] = Branches.BNE.Opcode;
+            _b.Ram[i++] = 253; // Move PC -2
+            _c.Tick(Branches.BCS.Cycles);
+            Assert.Equal(i - 2, _c.PC);
         }
 
         [Fact]
