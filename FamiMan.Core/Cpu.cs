@@ -244,7 +244,7 @@ namespace FamiMan.Core
                 case "BVS":
                     {
                         int jmpRel = _bus[addr] > 127 ? (255 - _bus[addr]) * -1 : _bus[addr];
-                        int jmpTo = PC + jmpRel;
+                        int jmpTo = PC + jmpRel - 1; // FIXME: why off by one?
 
                         len = Opcodes.Branches.BCC.Length;
                         var temp = P.Carry;
@@ -264,6 +264,8 @@ namespace FamiMan.Core
                         else if (i == Opcodes.Branches.BVS.Opcode && P.Overflow)
                             PC = (ushort)jmpTo;
                         P.Carry = temp;
+
+
                         break;
                     }
 
