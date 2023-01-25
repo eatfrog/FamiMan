@@ -1,5 +1,7 @@
 ﻿using FamiMan.Core;
+using FamiMan.GUI.UI;
 using SDL2;
+using System.Text;
 using static SDL2.SDL;
 
 internal class Program
@@ -27,9 +29,9 @@ internal class Program
         var c = b.Cpu;
         //this opens a font style and sets a size
         IntPtr font = SDL_ttf.TTF_OpenFont("c:\\windows\\fonts\\arial.ttf", 24);
-        SDL_Color white = new SDL_Color { r = 255, g = 255, b = 255 };
+        SDL_Color white = new() { r = 255, g = 255, b = 255 };
         SDL_Rect message_rect = new(); //create a rect
-
+        int waitTime = 0;
         while (!quit)
         {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -48,6 +50,14 @@ internal class Program
                             case SDL_Keycode.SDLK_q:
                                 quit = true;
                                 break;
+                            case SDL_Keycode.SDLK_DOWN:
+                                waitTime++;
+                                UI.WriteText(renderer, message_rect, font, white, "Wait: " + waitTime, 6);
+                                break;
+                            case SDL_Keycode.SDLK_UP:
+                                if (waitTime > 0) { waitTime--; }
+                                UI.WriteText(renderer, message_rect, font, white, "Wait: " + waitTime, 6);
+                                break;
                         }
                         break;
                     default:
@@ -55,70 +65,23 @@ internal class Program
                 }
             }
 
+            UI.WriteText(renderer, message_rect, font, white, "PC: " + c.PC.ToString("X") + " - " + c.CurrentInstructionName, 0);
+            UI.WriteText(renderer, message_rect, font, white, "A: " + c.A, 1);
+            UI.WriteText(renderer, message_rect, font, white, "X: " + c.X, 2);
+            UI.WriteText(renderer, message_rect, font, white, "Y: " + c.Y, 3);
+            UI.WriteText(renderer, message_rect, font, white, "S: " + c.S, 4);
+            UI.WriteText(renderer, message_rect, font, white, "P: " + c.P.AsByte(), 5);
 
-            SDL_SetRenderDrawColor(renderer, c.X, 50, 50, 255);
-            SDL_RenderDrawPoint(renderer, 1, 1);
-            SDL_SetRenderDrawColor(renderer, c.Y, 50, 50, 255);
-            SDL_RenderDrawPoint(renderer, 2, 2);
-            var memVal = b.Ram[0x044];
-            SDL_SetRenderDrawColor(renderer, memVal, 50, 50, 255);
-            SDL_RenderDrawPoint(renderer, 2, 2);
-            WriteText(message_rect, font, white, "PC: " + c.PC.ToString("X"), 0);
-            WriteText(message_rect, font, white, "A: " + c.A, 1);
-            WriteText(message_rect, font, white, "X: " + c.X, 2);
-            WriteText(message_rect, font, white, "Y: " + c.Y, 3);
-            WriteText(message_rect, font, white, "S: " + c.S, 4);
-            WriteText(message_rect, font, white, "P: " + c.P.AsByte(), 5);
+            //Span<byte> mem = b.Ram.AsSpan()[0x6000..0x6017];
+            //string memString = Encoding.Default.GetString(mem.ToArray());
+            //UI.WriteText(renderer, message_rect, font, white, "0x6000: " + memString, 6);
 
             SDL_RenderPresent(renderer);
             c.Tick();
+            Thread.Sleep(waitTime);
         }
 
-        void WriteText(SDL_Rect rect, IntPtr font, SDL_Color color, string text, int row)
-        {
 
-            if (font == IntPtr.Zero)
-            {
-                throw new InvalidOperationException(SDL_GetError());
-            }
-            // this is the color in rgb format,
-            // maxing out all would give you the color white,
-            // and it will be your text's color
-
-            // as TTF_RenderText_Solid could only be used on
-            // SDL_Surface then you have to create the surface first
-            IntPtr surfaceMessage =
-                SDL_ttf.TTF_RenderUTF8_Solid(font, text, color);
-
-            // now you can convert it into a texture
-            IntPtr messageTexture = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
-
-            rect.x = 15;  //controls the rect's x coordinate 
-            rect.y = 15 + 60 * row; // controls the rect's y coordinte
-            rect.w = 150; // controls the width of the rect
-            rect.h = 50; // controls the height of the rect
-
-
-            SDL_Rect temp;
-            temp.x = 0;
-            temp.y = 0;
-            temp.w = 200;
-            temp.h = 100;
-            // (0,0) is on the top left of the window/screen,
-            // think a rect as the text's box,
-            // that way it would be very simple to understand
-
-            // Now since it's a texture, you have to put RenderCopy
-            // in your game loop area, the area where the whole code executes
-
-            // you put the renderer's name first, the Message,
-            // the crop size (you can ignore this if you don't want
-            // to dabble with cropping), and the rect which is the size
-            // and coordinate of your texture
-            SDL_RenderCopy(renderer, messageTexture, ref temp, ref rect);
-            SDL_DestroyTexture(messageTexture);
-            SDL_FreeSurface(surfaceMessage);
-        }
 
         SDL_DestroyRenderer(renderer);
         SDL_DestroyWindow(window);
@@ -131,7 +94,7 @@ internal class Program
 
         //io.LoadProgramFromHexString("A9448544E644C544A22DE646A4464C0000", 0);
         //c.S = 0xFF;
-        var rom = b.IO.LoadINesRomFile(Directory.GetCurrentDirectory() + "\\files\\test2.nes");
+        var rom = b.IO.LoadINesRomFile(Directory.GetCurrentDirectory() + "\\files\\01-implied.nes");
         b.Cpu.Reset();
         return b;
     }

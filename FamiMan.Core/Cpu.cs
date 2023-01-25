@@ -60,6 +60,11 @@ namespace FamiMan.Core
 
         }
 
+        public string CurrentInstructionName
+        {
+            get => Opcodes.Find(_bus[PC]).OpcodeName;
+        }
+
         public void Tick()
         {
             _ticks++;
@@ -193,12 +198,10 @@ namespace FamiMan.Core
                     //            && ((A ^ setValue) & 0x80) != 0;
 
                     P.Negative = (setValue & 0x80) != 0; // bit 7
+                    P.Zero = setValue == 0;
 
                     if (opcode.OpcodeName == "AND" || opcode.OpcodeName == "EOR" || opcode.OpcodeName == "ORA")
-                    {
-                        P.Zero = setValue == 0;
                         A = setValue;
-                    }
                     else if (opcode.OpcodeName == "BIT")
                         P.Overflow = (setValue & (1 << 5)) != 0;
 
@@ -238,7 +241,7 @@ namespace FamiMan.Core
                 case "BCS":
                 case "BEQ":
                 case "BNE":
-                case "BMI":
+                case "BMI": 
                 case "BPL":
                 case "BVC":
                 case "BVS":
