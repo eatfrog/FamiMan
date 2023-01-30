@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FamiMan.Core.Interfaces;
+using System;
 using System.Net.Http.Headers;
 
 namespace FamiMan.Core
@@ -9,11 +10,12 @@ namespace FamiMan.Core
     {
         private Bus _b;
         private Ram _r;
-        public Ppu(Bus b)
+        public Ppu(Bus b, IMapper mapper)
         {
             _b = b;
             _r = new Ram(16 * 1024);
-            Registers = new PPURegister();
+            _mapper = mapper;
+            Register = new PPURegister(_mapper);
             /* The PPU addresses a 16kB space, $0000-3FFF, 
              * completely separate from the CPU's address bus. 
              * It is either directly accessed by the PPU itself, 
@@ -34,17 +36,39 @@ namespace FamiMan.Core
          * PPUDATA	    $2007	dddd dddd	PPU data read/write
          * OAMDMA	    $4014	aaaa aaaa	OAM DMA high address
         */
-        public PPURegister Registers;
+        public PPURegister Register;
+        private IMapper _mapper;
+
+
+        public ref byte this[ushort index]
+        {
+            get
+            {
+                return ref _mapper.GetPPUByteAtAddress(index);
+            }
+        }
     }
 
     public class PPURegister
     {
-        public PPURegister()
+        public PPURegister(IMapper mapper)
         {
             _registers = new byte[9];
+            _mapper = mapper;
         }
 
         private byte[] _registers { get; set; }
+
+        private IMapper _mapper;
+
+        public byte[] Registers
+        {
+            get
+            {
+                return _registers;
+            }
+        }
+
         public byte PPUCTRL
         {
             get => _registers[0];
@@ -92,16 +116,5 @@ namespace FamiMan.Core
             get => _registers[8]; set => _registers[8] = value;
         }
 
-        public ref byte this[ushort index]
-        {
-            get
-            {
-                if (index >= 0x2000 && index < 0x2008)
-                    return ref _registers[index - 0x2000];
-                else if (index == 0x4012)
-                    return ref _registers[8];
-                else throw new InvalidOperationException("Memory access violation");
-            }
-        }
     }
 }

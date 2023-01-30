@@ -69,7 +69,7 @@ internal class Program
             UI.WriteText(renderer, message_rect, font, white, "A: " + c.A, 1);
             UI.WriteText(renderer, message_rect, font, white, "X: " + c.X, 2);
             UI.WriteText(renderer, message_rect, font, white, "Y: " + c.Y, 3);
-            UI.WriteText(renderer, message_rect, font, white, "S: " + c.S, 4);
+            UI.WriteText(renderer, message_rect, font, white, "SP: " + c.S.ToString("X") + " " + (c.S != 0xFD ? b[c.S].ToString("X") : ""), 4);
             UI.WriteText(renderer, message_rect, font, white, "P: " + c.P.AsByte(), 5);
 
             //Span<byte> mem = b.Ram.AsSpan()[0x6000..0x6017];
@@ -94,7 +94,7 @@ internal class Program
 
         //io.LoadProgramFromHexString("A9448544E644C544A22DE646A4464C0000", 0);
         //c.S = 0xFF;
-        var rom = b.IO.LoadINesRomFile(Directory.GetCurrentDirectory() + "\\files\\01-implied.nes");
+        var rom = b.IO.LoadINesRomFile(Directory.GetCurrentDirectory() + "\\files\\test.nes");
         b.Cpu.Reset();
         return b;
     }

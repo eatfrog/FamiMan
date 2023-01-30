@@ -298,6 +298,8 @@ namespace FamiMan.Core
                 case "STA":
                     len = Opcodes.STA.Lengths[i];
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
+                    if (addr == S) throw new InvalidOperationException("Attempting to write over stack pointer");
+
                     if (i == Opcodes.STA.Absolute_X.Opcode || i == Opcodes.STA.ZeroPage_X.Opcode) addr += X;
                     if (i == Opcodes.STA.Absolute_Y.Opcode ) addr += Y;
 
@@ -311,6 +313,8 @@ namespace FamiMan.Core
                         len = Opcodes.STY.Lengths[i];
 
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
+
+                    if (addr == S) throw new InvalidOperationException("Attempting to write over stack pointer");
 
                     if (i == Opcodes.STX.ZeroPage_Y.Opcode) addr += Y;
                     else if (i == Opcodes.STY.ZeroPage_X.Opcode) addr += X;
@@ -446,6 +450,7 @@ namespace FamiMan.Core
                         PC += 3;
                         if (opcode.OpcodeName == "JSR")
                         {
+                            if (S == 0) throw new InvalidOperationException("Stack pointer underflow");
                             _bus[S--] = (byte)PC;
                             _bus[S--] = (byte)(PC >> 8);
                         }
