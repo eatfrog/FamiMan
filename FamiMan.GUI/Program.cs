@@ -34,7 +34,7 @@ internal class Program
         int waitTime = 0;
         bool breaked = false;
         ushort lastPC = 0;
-        string jumpLocation = string.Empty;
+        string debugText = string.Empty;
         while (!quit)
         {
             SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
@@ -73,23 +73,23 @@ internal class Program
             UI.WriteText(renderer, message_rect, font, white, "PC: " + c.PC.ToString("X") + " - " + c.CurrentInstructionName, 0);
             if (!breaked && c.PC != lastPC && !c.Waiting)
             {
-                byte test1 = (byte)(c.S + 1);
-                byte test2 = (byte)(c.S + 2);
+                byte test1 = (byte)(c.SP + 1);
+                byte test2 = (byte)(c.SP + 2);
                 ushort addr = (ushort)(b[(ushort)(c.PC + 1)] + (b[(ushort)(c.PC + 2)] << 8));
 
                 if (c.CurrentInstructionName == "RTS")
-                    jumpLocation = " -> " + BitConverter.ToUInt16(new byte[2] { b[test1], b[test2] }, 0).ToString("X");
+                    debugText = " -> " + BitConverter.ToUInt16(new byte[2] { b[test2], b[test1] }, 0).ToString("X");
                 else if (c.CurrentInstructionName == "JSR")
-                    jumpLocation = " -> " + (addr).ToString("X");
+                    debugText = " -> " + (addr).ToString("X");
                 else if (c.CurrentInstructionName == "BNE")
                 {
                     addr = b[(ushort)(c.PC + 1)];
                     int jmpRel = addr > 127 ? (addr - 255) : addr;
                     int jmpTo = c.PC + jmpRel; 
                     if (!c.P.Zero)
-                        jumpLocation = " -> " + (jmpTo).ToString("X");
+                        debugText = " -> " + (jmpTo).ToString("X");
                     else
-                        jumpLocation = " !! " + (jmpTo).ToString("X");
+                        debugText = " !! " + (jmpTo).ToString("X");
 
                 }
                 else if (c.CurrentInstructionName == "BEQ")
@@ -98,21 +98,25 @@ internal class Program
                     int jmpRel = addr > 127 ? (addr - 255) : addr;
                     int jmpTo = c.PC + jmpRel;
                     if (c.P.Zero)
-                        jumpLocation = " -> " + (jmpTo).ToString("X");
+                        debugText = " -> " + (jmpTo).ToString("X");
                     else
-                        jumpLocation = " !! " + (jmpTo).ToString("X");
+                        debugText = " !! " + (jmpTo).ToString("X");
 
                 }
-                else jumpLocation = string.Empty;
+                else if (c.CurrentInstructionName == "PHA")
+                {
+                    debugText = " S=" + c.A.ToString("X") + " SP=" + (c.SP - 1).ToString("X");
+                }
+                else debugText = string.Empty;
 
-                Console.WriteLine(c.PC.ToString("X") + " - " + c.CurrentInstructionName + jumpLocation);
+                Console.WriteLine(c.PC.ToString("X") + " - " + c.CurrentInstructionName + debugText);
                 lastPC = c.PC;
             }
             if (c.CurrentInstructionName == "BRK") breaked = true;
             UI.WriteText(renderer, message_rect, font, white, "A: " + c.A, 1);
             UI.WriteText(renderer, message_rect, font, white, "X: " + c.X, 2);
             UI.WriteText(renderer, message_rect, font, white, "Y: " + c.Y, 3);
-            UI.WriteText(renderer, message_rect, font, white, "SP: " + c.S.ToString("X") + " " + (c.S != 0xFD ? b[c.S].ToString("X") : ""), 4);
+            UI.WriteText(renderer, message_rect, font, white, "SP: " + c.SP.ToString("X") + " " + (c.SP != 0xFD ? b[c.SP].ToString("X") : ""), 4);
             UI.WriteText(renderer, message_rect, font, white, "P: " + c.P.AsByte(), 5);
 
             UI.WriteText(renderer, message_rect, font, white, "02h: " + b.Mapper.GetByteAtAddress(0x02).ToString("X"), 7);

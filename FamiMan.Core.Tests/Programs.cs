@@ -31,7 +31,7 @@ namespace FamiMan.Core.Tests
         [Fact]
         public void TestProgram2()
         {
-            _c.S = 0x20;
+            _c.SP = 0x20;
             // LDA #$44
             // STA $44
             // INC $44

@@ -22,7 +22,7 @@ namespace FamiMan.Core
         /// <summary>
         /// Stack pointer
         /// </summary>
-        public byte S = new byte(); // Stack pointer
+        public byte SP = new byte(); // Stack pointer
 
         /// <summary>
         /// Status registers
@@ -53,7 +53,7 @@ namespace FamiMan.Core
             Y = 0;
 
             // Stack pointer
-            S = 0xFD;
+            SP = 0xFD;
 
             // $fffc-$fffd	Start of reset handler
             PC = (ushort)(_bus[0xfffc] + (_bus[0xfffd] << 8));
@@ -297,7 +297,7 @@ namespace FamiMan.Core
                 case "STA":
                     len = Opcodes.STA.Lengths[i];
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
-                    if (addr == S) throw new InvalidOperationException("Attempting to write over stack pointer");
+                    if (addr == SP) throw new InvalidOperationException("Attempting to write over stack pointer");
 
                     if (i == Opcodes.STA.Absolute_X.Opcode || i == Opcodes.STA.ZeroPage_X.Opcode) addr += X;
                     if (i == Opcodes.STA.Absolute_Y.Opcode ) addr += Y;
@@ -313,7 +313,7 @@ namespace FamiMan.Core
 
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
 
-                    if (addr == S) throw new InvalidOperationException("Attempting to write over stack pointer");
+                    if (addr == SP) throw new InvalidOperationException("Attempting to write over stack pointer");
 
                     if (i == Opcodes.STX.ZeroPage_Y.Opcode) addr += Y;
                     else if (i == Opcodes.STY.ZeroPage_X.Opcode) addr += X;
@@ -411,52 +411,54 @@ namespace FamiMan.Core
                     break;
                 case "TXS":
                     len = 1;
-                    S = X;
+                    SP = X;
                     break;
                 case "TSX":
                     len = 1;
-                    X = S;
+                    X = SP;
                     break;
                 case "PHA":
                     len = 1;
-                    _bus[S] = A;
-                    S--;
+                    _bus[SP] = A;
+                    SP--;
                     break;
                 case "PLA":
                     len = 1;
-                    A = _bus[S];
+                    A = _bus[SP];
                     P.Negative = (A & 0x80) != 0; // bit 7
                     P.Zero = A == 0;
-                    S++;
+                    SP++;
                     break;
                 case "PHP":
                     len = 1;
-                    _bus[S] = P.AsByte();
-                    S--;
+                    _bus[SP] = P.AsByte();
+                    SP--;
                     break;
                 case "PLP":
                     len = 1;
-                    P.FromByte(_bus[S]);
-                    S++;
+                    P.FromByte(_bus[SP]);
+                    SP++;
                     break;
                 case "JMP":
-                case "JSR":
+                case "JSR": // jump to subroutine
                     {
                         //len = 3; // Both JMP and JSR have 3 len
                         len = 0;
                         addr = Get16bitAbsoluteAdress(addr);
                         if (opcode.OpcodeVersionName == "Indirect")
-                        {
-                            throw new InvalidOperationException("Is this needed?");
                             addr = Get16bitAbsoluteAdress(addr);
-                        }
 
                         PC += 2; 
                         if (opcode.OpcodeName == "JSR")
                         {
-                            if (S == 0) throw new InvalidOperationException("Stack pointer underflow");
-                            _bus[S--] = (byte)PC;
-                            _bus[S--] = (byte)(PC >> 8);
+                            // store old program counter on stack
+                            if (SP < 2) throw new InvalidOperationException("Stack pointer underflow");
+                            ushort high = (ushort)(SP);
+                            ushort low = (ushort)(SP - 1);
+                            //ushort pc = (ushort) (PC - 1);
+                            _bus[low] = (byte)PC;
+                            _bus[high] = (byte)(PC >> 8);
+                            SP -= 2;
                         }
                         PC = addr;
                         break;
@@ -464,9 +466,11 @@ namespace FamiMan.Core
                 case "RTS":
                     {
                         len = 1;
-                        ushort high = ++S;
-                        ushort low = ++S;
-                        PC = BitConverter.ToUInt16(new byte[2] { _bus[low], _bus[high] }, 0);
+                        ushort low = (ushort)(SP + 1);
+                        ushort high = (ushort)(SP + 2);
+                        PC = (ushort) (_bus[low] | (_bus[high] << 8));
+                        SP += 2;
+                        //PC = BitConverter.ToUInt16(new byte[2] { _bus[low], _bus[high] }, 0);
                         
                         break;
                     }

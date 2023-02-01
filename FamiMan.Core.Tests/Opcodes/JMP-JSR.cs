@@ -47,7 +47,7 @@ namespace FamiMan.Core.Tests.Opcodes
         public void JSR_0x20_Absolute()
         {
             byte i = 0;
-            _c.S = 0x10;
+            _c.SP = 0x10;
             _b.Ram[i++] = NOP.NOP_14.Opcode;
             _c.Tick(1);
             _b.Ram[i++] = JSR.Absolute.Opcode;
@@ -55,7 +55,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = 0x01; // Jump to 0x110
             _c.Tick(JSR.Absolute.Cycles);
             Assert.Equal(0x110, _c.PC);
-            Assert.Equal(4, _b.Ram[(byte)(_c.S + 2)]);
+            Assert.Equal(4, _b.Ram[(byte)(_c.SP + 2)]);
         }
 
     }
