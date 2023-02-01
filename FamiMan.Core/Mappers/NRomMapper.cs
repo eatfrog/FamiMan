@@ -17,34 +17,22 @@ namespace FamiMan.Core.Mappers
     internal class NRomMapper : IMapper
     {
         private readonly Bus _b;
-        private Ram Ram
-        {
-            get
-            {
-                return _b.Ram;
-            }
-        }
+        private Ram Ram => _b.Ram;
 
-        private Ppu PPU
-        {
-            get
-            {
-                return _b.Ppu;
-            }
-        }
+        private Ppu PPU => _b.Ppu;
 
-        private IO IO
-        {
-            get
-            {
-                return _b.IO;
-            }
-        }
+        private IO IO => _b.IO;
+
+        private Apu APU => _b.Apu;
+        
+        private Ram _sram;
         public NRomMapper (Bus b)
         {
             _b = b;
+            _sram = new Ram(8192);
         }
 
+        // Maybe we should have separate Read and Write methods instead to limit access to read only addresses
         public ref byte GetByteAtAddress(ushort index)
         {
             // Ram = $0000 -$07FF
@@ -53,7 +41,7 @@ namespace FamiMan.Core.Mappers
             // 0100 to 01ff is stack
             // 0200 to 07ff is actual ram
             // 08xx, 10xx, 18xx are mirrors
-            if (index >= 0 && index < 0x7FF)
+            if (index >= 0 && index <= 0x07FF)
                 return ref Ram.AsSpan()[index];
             else if (index >= 0x800 && index <= 0xFFF)
                 return ref Ram.AsSpan()[index - 0x800];
@@ -63,6 +51,10 @@ namespace FamiMan.Core.Mappers
                 return ref Ram.AsSpan()[index - 0x1800];
             else if (index >= 0x2000 && index <= 0x2007)
                 return ref GetPPUByteAtAddress(index);
+            else if (index >= 0x4000 && index <= 0x4014)
+                return ref APU.Registers[index];
+            else if (index >= 0x6000 && index <= 0x7FFF)
+                return ref _sram.AsSpan()[index - 0x6000];
             else if (index >= 0x8000 && index <= 0xFFFF)
             {
                 if (IO.PRGROM.Length < index)
@@ -101,12 +93,11 @@ namespace FamiMan.Core.Mappers
         public ref byte GetPPUByteAtAddress(ushort index)
         {
 
-
             if (index < 0x2000) // CHR-ROM
                 return ref _b.IO.CHRROM[index];
             else if (index >= 0x2000 && index < 0x2008)
                 return ref PPU.Register.Registers[index - 0x2000];
-            else if (index == 0x4012) // OAMDMA
+            else if (index == 0x4014) // OAMDMA
                 return ref PPU.Register.Registers[8];
 
             else throw new InvalidOperationException("Memory access violation");

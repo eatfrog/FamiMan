@@ -60,6 +60,13 @@ namespace FamiMan.Core
                 public const int Length = 1;
                 public const int Cycles = 2;
             }
+
+            public static class SED
+            {
+                public const byte Opcode = 0xF8;
+                public const int Length = 1;
+                public const int Cycles = 2;
+            }
         }
     }
 }

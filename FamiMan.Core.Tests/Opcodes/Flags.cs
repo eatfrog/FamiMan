@@ -28,6 +28,16 @@ namespace FamiMan.Core.Tests.Opcodes
             Assert.False(_c.P.Carry);
         }
 
+        [Fact]
+        public void SED_0xF8()
+        {
+            _c.P.Carry = true;
+            byte i = 0;
+            _b.Ram[i++] = Flags.SED.Opcode;
+            _c.Tick(Flags.SED.Cycles);
+            Assert.True(_c.P.Decimal);
+        }
+
         // TODO: the rest maybe..
     }
 }

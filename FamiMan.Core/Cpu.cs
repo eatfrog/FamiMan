@@ -42,7 +42,7 @@ namespace FamiMan.Core
 
         private long _ticks = 0;
         private long _nextInstruction = 0;
-        private bool _waiting = false;
+        public bool Waiting = false;
         private bool _breaked = false;
 
         public void Reset()
@@ -56,8 +56,7 @@ namespace FamiMan.Core
             S = 0xFD;
 
             // $fffc-$fffd	Start of reset handler
-            PC = (ushort)(_bus[0xfffc] + (_bus[(ushort)(0xfffd)] << 8));
-
+            PC = (ushort)(_bus[0xfffc] + (_bus[0xfffd] << 8));
         }
 
         public string CurrentInstructionName
@@ -70,7 +69,7 @@ namespace FamiMan.Core
             _ticks++;
             if (_breaked) return;
             Opcode opcode = Opcodes.Find(_bus[PC]);
-            if (!_waiting)
+            if (!Waiting)
             {
                 if (opcode.IsKil()) throw new CpuException("Kil instruction. System halted.");
                 if (opcode.IsNop())
@@ -85,7 +84,7 @@ namespace FamiMan.Core
                     return;
                 }
                 _nextInstruction = opcode.Cycles - 1;
-                _waiting = true;
+                Waiting = true;
             }
             else
                 _nextInstruction--;
@@ -93,7 +92,7 @@ namespace FamiMan.Core
 
             if (_nextInstruction == 0)
             {
-                _waiting = false;
+                Waiting = false;
                 ExecuteNextInstruction(opcode);
             }
 
@@ -248,7 +247,7 @@ namespace FamiMan.Core
                     {
                         int jmpRel = _bus[addr] > 127 ? (_bus[addr] - 255): _bus[addr];
                         len = Opcodes.Branches.BCC.Length;
-                        int jmpTo = (int)PC + jmpRel - len + 1; // FIXME: len is added at the bottom of this, remove it here
+                        int jmpTo = (int)PC + jmpRel; // - len + 1; // FIXME: len is added at the bottom of this, remove it here
 
                         var temp = P.Carry;
                         if ((i == Opcodes.Branches.BCC.Opcode && !temp) ||
@@ -443,11 +442,16 @@ namespace FamiMan.Core
                 case "JMP":
                 case "JSR":
                     {
+                        //len = 3; // Both JMP and JSR have 3 len
                         len = 0;
                         addr = Get16bitAbsoluteAdress(addr);
                         if (opcode.OpcodeVersionName == "Indirect")
+                        {
+                            throw new InvalidOperationException("Is this needed?");
                             addr = Get16bitAbsoluteAdress(addr);
-                        PC += 3;
+                        }
+
+                        PC += 2; 
                         if (opcode.OpcodeName == "JSR")
                         {
                             if (S == 0) throw new InvalidOperationException("Stack pointer underflow");
@@ -459,10 +463,17 @@ namespace FamiMan.Core
                     }
                 case "RTS":
                     {
-                        len = 0;
+                        len = 1;
                         ushort high = ++S;
                         ushort low = ++S;
                         PC = BitConverter.ToUInt16(new byte[2] { _bus[low], _bus[high] }, 0);
+                        
+                        break;
+                    }
+                case "SED":
+                    {
+                        len = Opcodes.Flags.SED.Length;
+                        P.Decimal = true;
                         break;
                     }
                 default:
@@ -532,6 +543,12 @@ namespace FamiMan.Core
             {
                 get => _s[NEGATIVE];
                 set => _s[NEGATIVE] = value;
+            }
+
+            public bool Decimal
+            {
+                get => _s[DECIMAL];
+                set => _s[DECIMAL] = value;
             }
 
             public bool Carry

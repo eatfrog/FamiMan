@@ -13,8 +13,9 @@ namespace FamiMan.Core
             Ram = new Ram(2 * 1024);
             Cpu = new Cpu(this);
             Mapper = new NRomMapper(this);
-            Ppu = new Ppu(this, Mapper);
+            Ppu = new Ppu(this);
             IO = new IO(this);
+            Apu = new Apu(this);
         }
 
         public void Clock()

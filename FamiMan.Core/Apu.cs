@@ -39,7 +39,7 @@ namespace FamiMan.Core
     {
         public APURegister()
         {
-            _registers = new byte[9];
+            _registers = new byte[19];
         }
 
         private byte[] _registers { get; set; }
@@ -98,7 +98,7 @@ namespace FamiMan.Core
             }
         }
 
-        public byte DmcStatus
+        public byte DmcStatus // AKA SND_CHN
         {
             /* $4015	---D NT21	Control: DMC enable, length counter enables: noise, triangle, pulse 2, pulse 1 (write)
                $4015	IF-D NT21	Status: DMC interrupt, frame interrupt, length counter status: noise, triangle, pulse 2, pulse 1 (read)
@@ -111,14 +111,18 @@ namespace FamiMan.Core
             get => _registers[19]; set => _registers[19] = value;
         }
 
+
+        // Should probably rewrite to READ/WRITE methods instead
         public ref byte this[ushort index]
         {
             get
             {
-                if (index >= 0x2000 && index < 0x2008)
+                if (index >= 0x2000 && index < 0x2013)
                     return ref _registers[index - 0x2000];
-                else if (index == 0x4012)
-                    return ref _registers[8];
+                else if (index >= 0x4000 && index < 0x4013)
+                    return ref _registers[index - 0x4000];
+                else if (index == 0x2015 || index == 0x4015)
+                    return ref _registers[18];
                 else throw new InvalidOperationException("Memory access violation");
             }
         }

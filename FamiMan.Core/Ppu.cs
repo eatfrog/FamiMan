@@ -10,12 +10,19 @@ namespace FamiMan.Core
     {
         private Bus _b;
         private Ram _r;
-        public Ppu(Bus b, IMapper mapper)
+
+        private const ushort PPUSTATUS = 0x2002;
+
+        public Ppu(Bus b)
         {
             _b = b;
             _r = new Ram(16 * 1024);
-            _mapper = mapper;
-            Register = new PPURegister(_mapper);
+            Register = new PPURegister
+            {
+                // Vblank always on
+                PPUSTATUS = 128
+            };
+
             /* The PPU addresses a 16kB space, $0000-3FFF, 
              * completely separate from the CPU's address bus. 
              * It is either directly accessed by the PPU itself, 
@@ -37,29 +44,41 @@ namespace FamiMan.Core
          * OAMDMA	    $4014	aaaa aaaa	OAM DMA high address
         */
         public PPURegister Register;
-        private IMapper _mapper;
 
-
-        public ref byte this[ushort index]
+        public byte Read(ushort index)
         {
-            get
+            if (index == PPUSTATUS) 
             {
-                return ref _mapper.GetPPUByteAtAddress(index);
+                return Register.PPUSTATUS;
+            }
+            else
+            {
+                throw new InvalidOperationException("Invalid memory address access in PPU");
+            }
+        }
+
+        public void Write(ushort index, byte value)
+        {
+            if (index == PPUSTATUS) 
+            { 
+                Register.PPUSTATUS = value;
+            }
+            else
+            {
+                throw new InvalidOperationException("Invalid memory address access in PPU");
             }
         }
     }
 
     public class PPURegister
     {
-        public PPURegister(IMapper mapper)
+        public PPURegister()
         {
             _registers = new byte[9];
-            _mapper = mapper;
         }
 
         private byte[] _registers { get; set; }
 
-        private IMapper _mapper;
 
         public byte[] Registers
         {
