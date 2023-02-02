@@ -91,7 +91,7 @@ internal class Program
                 {
                     addr = b[(ushort)(c.PC + 1)];
                     int jmpRel = addr > 127 ? (addr - 255) : addr;
-                    int jmpTo = c.PC + jmpRel; 
+                    int jmpTo = (int)c.PC + jmpRel + 1 - 2;
                     if (!c.P.Zero)
                         debugText = " -> " + (jmpTo).ToString("X");
                     else
@@ -102,7 +102,7 @@ internal class Program
                 {
                     addr = b[(ushort)(c.PC + 1)];
                     int jmpRel = addr > 127 ? (addr - 255) : addr;
-                    int jmpTo = c.PC + jmpRel;
+                    int jmpTo = (int)c.PC + jmpRel + 1 - 2;
                     if (c.P.Zero)
                         debugText = " -> " + (jmpTo).ToString("X");
                     else

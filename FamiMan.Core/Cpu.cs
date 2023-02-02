@@ -246,9 +246,9 @@ namespace FamiMan.Core
                 case "BVC":
                 case "BVS":
                     {
-                        int jmpRel = _bus[addr] > 127 ? (_bus[addr] - 255): _bus[addr];
+                        int jmpRel = _bus[addr] > 127 ? (_bus[addr] - 256): _bus[addr];
                         len = Opcodes.Branches.BCC.Length;
-                        int jmpTo = (int)PC + jmpRel; // - len + 1; // FIXME: len is added at the bottom of this, remove it here
+                        int jmpTo = (int)PC + jmpRel; // FIXME: len is added at the bottom of this, remove it here
 
                         var temp = P.Carry;
                         if ((i == Opcodes.Branches.BCC.Opcode && !temp) ||

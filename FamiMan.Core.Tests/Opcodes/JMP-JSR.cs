@@ -55,7 +55,8 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = 0x01; // Jump to 0x110
             _c.Tick(JSR.Absolute.Cycles);
             Assert.Equal(0x110, _c.PC);
-            Assert.Equal(4, _b.Ram[(byte)(_c.SP + 2)]);
+
+            Assert.Equal(3, _b.Ram[(byte)(_c.SP + 1)]);
         }
 
     }
