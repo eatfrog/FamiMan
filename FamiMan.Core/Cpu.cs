@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 
 namespace FamiMan.Core
 {
@@ -384,7 +385,7 @@ namespace FamiMan.Core
                     P.InterruptsDisabled = false;
                     break;
                 case "SEI":
-                    len = Opcodes.Flags.CLI.Length;
+                    len = Opcodes.Flags.SEI.Length;
                     P.InterruptsDisabled = true;
                     break;
                 case "CLV":
@@ -444,34 +445,40 @@ namespace FamiMan.Core
                     {
                         //len = 3; // Both JMP and JSR have 3 len
                         len = 0;
-                        addr = Get16bitAbsoluteAdress(addr);
+                        addr = GetWord(addr);
+                        var oldPc = PC + 2;
                         if (opcode.OpcodeVersionName == "Indirect")
-                            addr = Get16bitAbsoluteAdress(addr);
+                        {                           
+                            ushort hi = (ushort) ((addr & 0xFF) == 0xFF ? addr - 0xFF : addr + 1);
+                            uint oldPC = PC;
+                            PC = (ushort)(_bus[addr] | (ushort)(_bus[hi] << 8));
 
-                        PC += 2; 
+                            if ((oldPC & 0xFF00) != (PC & 0xFF00)) _nextInstruction += 2;
+                        }
+                        else
+                        {
+                            PC += 2; 
+                            PC = addr;
+                        }
                         if (opcode.OpcodeName == "JSR")
                         {
                             // store old program counter on stack
-                            if (SP < 2) throw new InvalidOperationException("Stack pointer underflow");
-                            ushort high = (ushort)(SP);
-                            ushort low = (ushort)(SP - 1);
-                            //ushort pc = (ushort) (PC - 1);
-                            _bus[low] = (byte)PC;
-                            _bus[high] = (byte)(PC >> 8);
-                            SP -= 2;
+                            PushWord((ushort)oldPc);
                         }
-                        PC = addr;
                         break;
                     }
+                case "RTI": // return from interrupt
+                    len = 0; // Opcodes.RTI.Length;
+                    // RTI retrieves the Processor Status Word (flags) and the Program Counter from the stack in that order (interrupts push the PC first and then the PSW).
+                    // Note that unlike RTS, the return address on the stack is the actual address rather than the address - 1.
+                    P.FromByte(PopByte());                    
+                    PC = PopWord();
+                    break;
                 case "RTS":
                     {
                         len = 1;
-                        ushort low = (ushort)(SP + 1);
-                        ushort high = (ushort)(SP + 2);
-                        PC = (ushort) (_bus[low] | (_bus[high] << 8));
-                        SP += 2;
-                        //PC = BitConverter.ToUInt16(new byte[2] { _bus[low], _bus[high] }, 0);
-                        
+                        // get old PC back from stack
+                        PC = PopWord();
                         break;
                     }
                 case "SED":
@@ -485,6 +492,34 @@ namespace FamiMan.Core
             }
 
             PC += (ushort)len;
+        }
+
+        private void PushWord(ushort word)
+        {
+            if (SP < 2) throw new InvalidOperationException("Stack pointer underflow");
+
+            ushort high = SP;
+            ushort low = (ushort)(SP - 1);
+            //ushort pc = (ushort) (PC - 1);
+            _bus[low] = (byte)word;
+            _bus[high] = (byte)(word >> 8);
+            SP -= 2;
+        }
+
+        private ushort PopWord()
+        {
+            ushort low, high;
+            low = (ushort)(SP + 1);
+            high = (ushort)(SP + 2);
+            SP += 2;
+            return (ushort)(_bus[low] | (_bus[high] << 8));
+        }
+
+        private byte PopByte()
+        {
+            var ret = _bus[SP];
+            SP++;
+            return ret;
         }
 
         private void PerformADC(byte val)
@@ -522,13 +557,13 @@ namespace FamiMan.Core
                     addr = _bus[addr];
                     break;
                 case MemoryMappingMode.Absolute:
-                    addr = Get16bitAbsoluteAdress(addr);
+                    addr = GetWord(addr);
                     break;
                 case MemoryMappingMode.IndexedIndirect:
-                    addr = Get16bitAbsoluteAdress((ushort)(_bus[addr] + X));
+                    addr = GetWord((ushort)(_bus[addr] + X));
                     break;
                 case MemoryMappingMode.IndirectIndexed:
-                    addr = (ushort)(Get16bitAbsoluteAdress(_bus[addr]) + Y);
+                    addr = (ushort)(GetWord(_bus[addr]) + Y);
                     break;
                 default:
                     break;
@@ -537,7 +572,7 @@ namespace FamiMan.Core
             return addr;
         }
 
-        private ushort Get16bitAbsoluteAdress(ushort addr) => (ushort)(_bus[addr] + (_bus[(ushort)(addr + 1)] << 8));
+        private ushort GetWord(ushort addr) => (ushort)(_bus[addr] + (_bus[(ushort)(addr + 1)] << 8));
 
         public class StatusRegisters
         {

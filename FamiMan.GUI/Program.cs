@@ -79,8 +79,14 @@ internal class Program
 
                 if (c.CurrentInstructionName == "RTS")
                     debugText = " -> " + BitConverter.ToUInt16(new byte[2] { b[test2], b[test1] }, 0).ToString("X");
-                else if (c.CurrentInstructionName == "JSR")
-                    debugText = " -> " + (addr).ToString("X");
+                else if (c.CurrentInstructionName == "JSR" || c.CurrentInstructionName == "JMP")
+                {
+                    var opcode = Opcodes.Find(b[c.PC]);
+                    if (opcode.OpcodeVersionName == "Indirect")
+                        debugText = " (->) " + (addr).ToString("X");
+                    else
+                        debugText = " -> " + (addr).ToString("X");
+                }
                 else if (c.CurrentInstructionName == "BNE")
                 {
                     addr = b[(ushort)(c.PC + 1)];
@@ -118,9 +124,6 @@ internal class Program
             UI.WriteText(renderer, message_rect, font, white, "Y: " + c.Y, 3);
             UI.WriteText(renderer, message_rect, font, white, "SP: " + c.SP.ToString("X") + " " + (c.SP != 0xFD ? b[c.SP].ToString("X") : ""), 4);
             UI.WriteText(renderer, message_rect, font, white, "P: " + c.P.AsByte(), 5);
-
-            UI.WriteText(renderer, message_rect, font, white, "02h: " + b.Mapper.GetByteAtAddress(0x02).ToString("X"), 7);
-            UI.WriteText(renderer, message_rect, font, white, "03h: " + b.Mapper.GetByteAtAddress(0x03).ToString("X"), 8);
 
             //Span<byte> mem = b.Ram.AsSpan()[0x6000..0x6017];
             //string memString = Encoding.Default.GetString(mem.ToArray());
