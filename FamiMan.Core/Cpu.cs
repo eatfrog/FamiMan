@@ -46,6 +46,8 @@ namespace FamiMan.Core
         public bool Waiting = false;
         private bool _breaked = false;
 
+        public long Ticks => _ticks;
+
         public void Reset()
         {
             P.InterruptsDisabled = true;
