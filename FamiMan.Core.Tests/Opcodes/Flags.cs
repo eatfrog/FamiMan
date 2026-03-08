@@ -38,6 +38,16 @@ namespace FamiMan.Core.Tests.Opcodes
             Assert.True(_c.P.Decimal);
         }
 
+        [Fact]
+        public void CLD_0xD8()
+        {
+            _c.P.Decimal = true;
+            byte i = 0;
+            _b.Ram[i++] = Flags.CLD.Opcode;
+            _c.Tick(Flags.CLD.Cycles);
+            Assert.False(_c.P.Decimal);
+        }
+
         // TODO: the rest maybe..
     }
 }
