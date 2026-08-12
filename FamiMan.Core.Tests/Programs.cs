@@ -24,7 +24,7 @@ namespace FamiMan.Core.Tests
         public void TestProgram1()
         {
             _io.LoadProgramFromHexString("A9448544E64400", 0);
-            _c.Tick(1000);
+            _c.Tick(10);
             Assert.Equal(0x45, _b[0x044]);
         }
 
@@ -41,7 +41,7 @@ namespace FamiMan.Core.Tests
             // LDX #45
             // RTS
             _io.LoadProgramFromHexString("A9 44 85 44 E6 44 20 0E 00 EA EA EA EA 00 A2 2D 60", 0);
-            _c.Tick(1000);
+            _c.Tick(32);
             Assert.Equal(45, _c.X);
             Assert.Equal(13, _c.PC);
         }

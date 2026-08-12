@@ -45,8 +45,10 @@ namespace FamiMan.Core
         private long _ticks = 0;
         private long _cyclesRemaining = 0;
         public bool Waiting = false;
-        private bool _breaked = false;
         private Opcode _currentOpcode;
+        private bool _servicingInterrupt;
+        private ushort _activeVector;
+
         private bool NmiPending { get; set; }
         private bool IrqPending { get; set; }
 
@@ -82,31 +84,88 @@ namespace FamiMan.Core
         public void Tick()
         {
             _ticks++;
-            if (_breaked) return;
+
+            if (_servicingInterrupt)
+            {
+                // Interrupts take some cycles before we move on
+                _cyclesRemaining--;
+                if (_cyclesRemaining == 0)
+                {
+                    _servicingInterrupt = false;
+                    PC = GetWord((ushort)_activeVector);
+                }
+                return;
+            }
+
+            // Hardware interrupts can only begin between instructions.
+            bool acceptNmi = !Waiting && NmiPending;
+            bool acceptIrq =
+                !Waiting &&
+                IrqPending &&
+                !P.InterruptsDisabled;
+
+            int vector = NmiPending ? 0xFFFA : 0xFFFE;
+            if (acceptNmi || acceptIrq)
+            {
+                _activeVector = acceptNmi
+                    ? (ushort)0xFFFA
+                    : (ushort)0xFFFE;
+
+                if (!_servicingInterrupt)
+                {
+                    _servicingInterrupt = true;
+
+                    // Clear only the interrupt being accepted.
+                    if (acceptNmi)
+                        NmiPending = false;
+                    else
+                        IrqPending = false;
+
+                    _activeVector = (ushort)vector;
+                    PushWord(PC);
+
+                    // $20 is unused and is always set
+                    // The B bit, $10, must be clear because this is a hardware interrupt, not BRK:
+                    byte stackedStatus = (byte)((P.AsByte() | 0x20) & ~0x10);
+                    PushByte(stackedStatus);
+                    P.InterruptsDisabled = true;
+                    _cyclesRemaining = 6;
+                    return;
+                }
+            }
+
+            // Get next opcode
+            _currentOpcode = Opcodes.Find(_bus[PC]);
+
+            if (_currentOpcode.IsBrk())
+            {
+                if (!_servicingInterrupt)
+                {
+                    _servicingInterrupt = true;
+                    _activeVector = 0xFFFE;
+
+                    PushWord((ushort)(PC + 2));
+                    PushByte((byte)(P.AsByte() | 0x30)); // 0x30 sets both bit 5 and the B bit
+                    P.InterruptsDisabled = true;
+                    _cyclesRemaining = Opcodes.BRK.BRK_00.Cycles - 1;
+                }
+                else
+                    _cyclesRemaining--;
+
+                if (_cyclesRemaining == 0)
+                {
+                    PC = (ushort)(_bus[0xfffe] + (_bus[0xffff] << 8));
+                    _servicingInterrupt = false;
+                }
+                return;
+            }
+
 
             // If we are not waiting for the current instruction to finish, we need to fetch the next opcode and start executing it
             if (!Waiting)
             {
-                // Get next opcode
-                _currentOpcode = Opcodes.Find(_bus[PC]);
-
                 if (_currentOpcode.IsKil()) throw new CpuException("Kil instruction. System halted.");
 
-                if (_currentOpcode.IsBrk())
-                {
-                    if (!_breaked)
-                    {
-                        _breaked = true;
-                        P.Break = true;
-                        PushWord((ushort)(PC + 2));
-                        PushByte((byte)(P.AsByte() | 0x30)); // 0x30 sets both bit 5 and the B bit
-                        PC = (ushort)(_bus[0xfffe] + (_bus[0xffff] << 8));
-                        P.InterruptsDisabled = true;
-                        _cyclesRemaining = Opcodes.BRK.BRK_00.Cycles;
-                    }
-                    else _cyclesRemaining--;
-                    return;
-                }
 
                 // Calculate the number of cycles needed for this instruction, including any extra cycles due to page boundary crossings or other factors
                 int extraCycles = CalculateExtraCycles(_currentOpcode);
@@ -124,8 +183,6 @@ namespace FamiMan.Core
                 Waiting = false;
 
                 ExecuteNextInstruction(_currentOpcode);
-
-
             }
 
         }
