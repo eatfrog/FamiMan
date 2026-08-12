@@ -104,7 +104,6 @@ namespace FamiMan.Core
                 IrqPending &&
                 !P.InterruptsDisabled;
 
-            int vector = NmiPending ? 0xFFFA : 0xFFFE;
             if (acceptNmi || acceptIrq)
             {
                 _activeVector = acceptNmi
@@ -121,7 +120,6 @@ namespace FamiMan.Core
                     else
                         IrqPending = false;
 
-                    _activeVector = (ushort)vector;
                     PushWord(PC);
 
                     // $20 is unused and is always set
