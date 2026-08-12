@@ -59,7 +59,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BEQ.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BEQ.Cycles);
-            Assert.Equal(i + Branches.BEQ.Length, _c.PC);
+            Assert.Equal(i, _c.PC);
         }
 
         [Fact]
@@ -87,7 +87,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BNE.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BNE.Cycles);
-            Assert.Equal(i + Branches.BNE.Length, _c.PC); // operands are still consumed
+            Assert.Equal(i, _c.PC); // i already points past both instruction bytes
         }
 
         [Fact]
@@ -107,7 +107,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BMI.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BMI.Cycles);
-            Assert.Equal(i + Branches.BMI.Length, _c.PC);
+            Assert.Equal(i, _c.PC);
         }
 
         [Fact]
@@ -127,7 +127,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BPL.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BPL.Cycles);
-            Assert.Equal(i + Branches.BPL.Length, _c.PC);
+            Assert.Equal(i, _c.PC);
         }
 
         [Fact]
@@ -147,7 +147,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BVC.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BVC.Cycles);
-            Assert.Equal(i + Branches.BVC.Length, _c.PC);
+            Assert.Equal(i, _c.PC);
         }
 
         [Fact]
@@ -167,7 +167,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BVS.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BVS.Cycles);
-            Assert.Equal(i + Branches.BVS.Length, _c.PC);
+            Assert.Equal(i, _c.PC);
         }
     }
 }

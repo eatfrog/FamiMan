@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 using Xunit;
 using static FamiMan.Core.Opcodes;
 
-namespace FamiMan.Core.Tests
+namespace FamiMan.Core.Tests.Opcodes
 {
-    public class CPX_CPY
+    public class CPXCPYTests
     {
         private Bus _b;
         private Cpu _c;
 
-        public CPX_CPY()
+        public CPXCPYTests()
         {
             _b = new Bus();
             _c = new Cpu(_b);

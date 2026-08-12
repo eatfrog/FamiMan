@@ -109,7 +109,6 @@ namespace FamiMan.Core
 
         private void ExecuteNextInstruction(Opcode opcode)
         {
-            var i = _bus[PC];
             bool advanceProgramCounter = true;
             ushort addr = PC; addr++;
             switch (opcode.Instruction)
@@ -117,8 +116,7 @@ namespace FamiMan.Core
                 case Instruction.ADC:
                     {
                         addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
-                        if (i == Opcodes.ADC.Absolute_X.Opcode || i == Opcodes.ADC.ZeroPage_X.Opcode) addr += X;
-                        if (i == Opcodes.ADC.Absolute_Y.Opcode) addr += Y;
+                        addr = ApplyIndex(addr, opcode.AddressingMode);
 
                         byte val = _bus[addr];
 
@@ -126,34 +124,29 @@ namespace FamiMan.Core
                         break;
                     }
                 case Instruction.SBC:
+                    {
+                        addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
+                        addr = ApplyIndex(addr, opcode.AddressingMode);
+
+                        // NOT on the value to subtract it from the accumulator
+                        PerformADC((byte)~_bus[addr]);
+                        break;
+                    }
                 case Instruction.CMP:
                     {
                         addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
-                        if (opcode.AddressingMode == AddressingMode.AbsoluteX || opcode.AddressingMode == AddressingMode.ZeroPageX) addr += X;
-                        else if (opcode.AddressingMode == AddressingMode.AbsoluteY) addr += Y;
-                        byte val = _bus[addr];
-                        SetNegativeFlag((byte)(A - val));
-                        P.Carry = A >= val;
-                        P.Zero = A == val;
+                        addr = ApplyIndex(addr, opcode.AddressingMode);
+                        Compare(addr, A);
                         break;
                     }
                 case Instruction.CPX:
                 case Instruction.CPY:
                     {
                         addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
-                        if (i == Opcodes.SBC.Absolute_X.Opcode || i == Opcodes.SBC.ZeroPage_X.Opcode) addr += X;
-                        if (i == Opcodes.SBC.Absolute_Y.Opcode) addr += Y;
-                        var tempAcc = A;
+                        addr = ApplyIndex(addr, opcode.AddressingMode);
                         if (opcode.Instruction == Instruction.CPX)
-                            A = X;
-                        if (opcode.Instruction == Instruction.CPY)
-                            A = Y;
-                        byte val = _bus[addr];
-                        bool temp = P.Carry;
-                        P.Carry = true;
-                        PerformADC((byte)(~val));
-                        P.Carry = temp;
-                        A = tempAcc;
+                            Compare(addr, X);
+                        else if (opcode.Instruction == Instruction.CPY) Compare(addr, Y);
                         break;
                     }
 
@@ -163,18 +156,7 @@ namespace FamiMan.Core
                 case Instruction.ORA:
                     {
                         addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
-
-                        if (i == Opcodes.AND.Absolute_X.Opcode ||
-                            i == Opcodes.AND.ZeroPage_X.Opcode ||
-                            i == Opcodes.EOR.ZeroPage_X.Opcode ||
-                            i == Opcodes.EOR.Absolute_X.Opcode ||
-                            i == Opcodes.ORA.Absolute_X.Opcode ||
-                            i == Opcodes.ORA.ZeroPage_X.Opcode) addr += X;
-                        if (i == Opcodes.AND.Absolute_Y.Opcode ||
-                            i == Opcodes.EOR.Absolute_Y.Opcode ||
-                            i == Opcodes.ORA.Absolute_Y.Opcode) addr += Y;
-
-
+                        addr = ApplyIndex(addr, opcode.AddressingMode);
 
                         byte val = _bus[addr];
                         byte result = 0;
@@ -211,9 +193,9 @@ namespace FamiMan.Core
                 case Instruction.ROR:
                     {
                         addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
+                        addr = ApplyIndex(addr, opcode.AddressingMode);
 
                         bool useAccumulator = opcode.AddressingMode == AddressingMode.Accumulator;
-                        if (opcode.AddressingMode is AddressingMode.ZeroPageX or AddressingMode.AbsoluteX) addr += X;
                         byte value = useAccumulator ? A : _bus[addr];
 
                         bool carryIn = P.Carry;
@@ -292,8 +274,7 @@ namespace FamiMan.Core
                 case Instruction.LDX:
                 case Instruction.LDY:
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
-                    if (i == Opcodes.LDA.Absolute_X.Opcode || i == Opcodes.LDA.ZeroPage_X.Opcode || i == Opcodes.LDY.ZeroPage_X.Opcode || i == Opcodes.LDY.Absolute_X.Opcode) addr += X;
-                    if (i == Opcodes.LDA.Absolute_Y.Opcode || i == Opcodes.LDX.Absolute_Y.Opcode) addr += Y;
+                    addr = ApplyIndex(addr, opcode.AddressingMode);
 
                     if (opcode.Instruction == Instruction.LDA)
                     {
@@ -316,29 +297,21 @@ namespace FamiMan.Core
                     break;
                 case Instruction.STA:
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
+                    addr = ApplyIndex(addr, opcode.AddressingMode);
                     if (addr == SP) throw new InvalidOperationException("Attempting to write over stack pointer");
-
-                    if (i == Opcodes.STA.Absolute_X.Opcode || i == Opcodes.STA.ZeroPage_X.Opcode) addr += X;
-                    if (i == Opcodes.STA.Absolute_Y.Opcode ) addr += Y;
 
                     _bus[addr] = A;
                     break;
                 case Instruction.STX:
                 case Instruction.STY:
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
+                    addr = ApplyIndex(addr, opcode.AddressingMode);
 
                     if (addr == SP) throw new InvalidOperationException("Attempting to write over stack pointer");
 
-                    if (i == Opcodes.STX.ZeroPage_Y.Opcode) addr += Y;
-                    else if (i == Opcodes.STY.ZeroPage_X.Opcode) addr += X;
-
-                    if (i == Opcodes.STX.ZeroPage.Opcode ||
-                        i == Opcodes.STX.ZeroPage_Y.Opcode ||
-                        i == Opcodes.STX.Absolute.Opcode)
+                    if (opcode.Instruction == Instruction.STX)
                         _bus[addr] = X;
-                    else if (i == Opcodes.STY.ZeroPage.Opcode ||
-                        i == Opcodes.STY.ZeroPage_X.Opcode ||
-                        i == Opcodes.STY.Absolute.Opcode)
+                    else
                         _bus[addr] = Y;
                     break;
                 case Instruction.TAX:
@@ -409,15 +382,14 @@ namespace FamiMan.Core
                 case Instruction.DEC:
                 case Instruction.INC:
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
-                    if (i == Opcodes.DEC.Absolute_X.Opcode || 
-                        i == Opcodes.DEC.ZeroPage_X.Opcode || 
-                        i == Opcodes.INC.Absolute_X.Opcode || 
-                        i == Opcodes.INC.ZeroPage_X.Opcode) addr += X;
+                    addr = ApplyIndex(addr, opcode.AddressingMode);
 
                     var op = 1;
                     if (opcode.Instruction == Instruction.DEC)
                         op = -1;
                     _bus[addr] = (byte)(_bus[addr] + op);
+                    SetZeroFlag(_bus[addr]);
+                    SetNegativeFlag(_bus[addr]);
                     break;
                 case Instruction.TXS:
                     SP = X;
@@ -493,6 +465,14 @@ namespace FamiMan.Core
                 PC += (ushort)opcode.Length;
         }
 
+        private void Compare(ushort addr, byte regValue)
+        {
+            byte val = _bus[addr];
+            SetNegativeFlag((byte)(regValue - val));
+            P.Carry = regValue >= val;
+            P.Zero = regValue == val;
+        }
+
         private void SetZeroFlag(byte value)
         {
             P.Zero = value == 0;
@@ -508,27 +488,22 @@ namespace FamiMan.Core
 
         private void PushWord(ushort word)
         {
-            if (SP < 2) throw new InvalidOperationException("Stack pointer underflow");
-
-            ushort high = SP;
-            ushort low = (ushort)(SP - 1);
-            //ushort pc = (ushort) (PC - 1);
-            _bus[low] = (byte)word;
-            _bus[high] = (byte)(word >> 8);
-            SP -= 2;
+            PushByte((byte)(word >> 8)); // high byte first
+            PushByte((byte)word);        // low byte second
         }
 
         private ushort PopWord()
         {
-            ushort low, high;
-            low = (ushort)(SP + 1);
-            high = (ushort)(SP + 2);
-            SP += 2;
-            return (ushort)(_bus[low] | (_bus[high] << 8));
+            byte low = PopByte();
+            byte high = PopByte();
+
+            return (ushort)(low | (high << 8));
         }
 
         private void PushByte(byte value)
         {
+            // Stack is located in page 1 ($0100-$01FF)
+            // 0x0100 is the fixed starting address of the 6502’s hardware stack page so we add that to the pointer value
             _bus[(ushort)(0x0100 | SP)] = value;
             SP--;
         }
@@ -551,6 +526,17 @@ namespace FamiMan.Core
             A = setValue;
         }
 
+        private ushort ApplyIndex(ushort address, AddressingMode mode)
+        {
+            return mode switch
+            {
+                AddressingMode.ZeroPageX => (byte)(address + X),
+                AddressingMode.ZeroPageY => (byte)(address + Y),
+                AddressingMode.AbsoluteX => (ushort)(address + X),
+                AddressingMode.AbsoluteY => (ushort)(address + Y),
+                _ => address
+            };
+        }
 
 
         private ushort ManageMemoryMapMode(ushort addr, MemoryMappingMode memorymap)
@@ -566,10 +552,10 @@ namespace FamiMan.Core
                     addr = GetWord(addr);
                     break;
                 case MemoryMappingMode.IndexedIndirect:
-                    addr = GetWord((ushort)(_bus[addr] + X));
+                    addr = GetZeroPageWord((byte)(_bus[addr] + X));
                     break;
                 case MemoryMappingMode.IndirectIndexed:
-                    addr = (ushort)(GetWord(_bus[addr]) + Y);
+                    addr = (ushort)(GetZeroPageWord(_bus[addr]) + Y);
                     break;
                 default:
                     break;
@@ -579,6 +565,9 @@ namespace FamiMan.Core
         }
 
         private ushort GetWord(ushort addr) => (ushort)(_bus[addr] + (_bus[(ushort)(addr + 1)] << 8));
+
+        private ushort GetZeroPageWord(byte addr) =>
+            (ushort)(_bus[addr] | (_bus[(byte)(addr + 1)] << 8));
 
         public class StatusRegisters
         {
