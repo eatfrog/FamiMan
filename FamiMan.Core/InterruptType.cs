@@ -2,6 +2,7 @@
 {
     public enum InterruptType
     {
-        NMI
+        NMI,
+        IRQ
     }
 }

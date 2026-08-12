@@ -10,9 +10,11 @@ Use a ROM you obtained legally and keep ROM files out of source control.
 
 - The solution builds in Debug and Release.
 - `FamiMan.Platform` now hides SDL and can display an ARGB framebuffer, draw debug text, and report keyboard events.
-- The CPU has implementations and tests for many official 6502 instructions.
-- 144 of 146 current tests pass. The known failures are `CLD` and `RTI`.
-- The iNES loader and an NROM/mapper-0 class have been started, but their ROM offsets and address translation need correcting.
+- The CPU now executes the official-opcode portion of `nestest`: all 5,003 compared CPU states matched the reference log.
+- All 213 current tests pass, including focused tests for instruction behavior, stack/status handling, branches, indexed addressing, page-crossing timing, and NROM PRG mapping.
+- Official instruction execution and the timing problems exposed by `nestest` are complete enough to move on from day-to-day CPU opcode work.
+- CPU interrupt entry is still unfinished: `BRK`, NMI, and IRQ must push the correct state, load their vectors, and be serviced at instruction boundaries.
+- The iNES loader and NROM/mapper-0 PRG mapping have been corrected and tested, but the rest of cartridge parsing, CHR handling, and bus behavior still need work.
 - The CPU bus is partly mapped, but it cannot yet model memory-mapped register side effects correctly.
 - The PPU is mostly a register placeholder; `Ppu.Tick()` is not implemented.
 - There is no controller implementation.
@@ -30,8 +32,8 @@ Use a ROM you obtained legally and keep ROM files out of source control.
 
 The result of this milestone is a repeatable baseline and an easy way to launch a ROM.
 
-- [ ] Fix the two known tests: `CLD` must clear the decimal flag, and `RTI` must restore status and PC correctly.
-- [ ] Run the complete test suite and record the result here.
+- [x] Fix the two known tests: `CLD` must clear the decimal flag, and `RTI` must restore status and PC correctly.
+- [x] Run the complete test suite and record the result here: 213 tests pass.
 - [ ] Let the GUI accept a ROM path from the command line instead of hard-coding `files/nestest.nes`.
 - [ ] Remove the forced `PC = 0xC000` from normal startup. Use the reset vector at `$FFFC-$FFFD`; only force `$C000` in the special `nestest` runner.
 - [ ] Add a friendly error for unsupported or malformed ROMs.
@@ -39,7 +41,7 @@ The result of this milestone is a repeatable baseline and an easy way to launch 
 
 Checkpoint:
 
-- [ ] `dotnet test FamiMan.sln` passes.
+- [x] `dotnet test FamiMan.sln` passes.
 - [ ] A chosen ROM loads from a command-line path and reaches its reset vector.
 
 ## Milestone 1: make the CPU trustworthy
@@ -48,38 +50,38 @@ Do not aim for transistor-level timing. First make every official instruction pr
 
 ### CPU state and stack
 
-- [ ] Rework the status register so reading `Carry` or any other flag has no side effects. The current carry getter clears the flag.
-- [ ] Give each status flag its documented bit position and ensure bit 5 is handled correctly when pushing/pulling status.
-- [ ] Put stack reads and writes in page `$0100-$01FF`, using address `$0100 | SP`.
+- [x] Rework the status register so reading `Carry` or any other flag has no side effects.
+- [x] Give each status flag its documented bit position and ensure bit 5 is handled correctly when pushing/pulling status.
+- [x] Put stack reads and writes in page `$0100-$01FF`, using address `$0100 | SP`.
 - [ ] Verify the stack direction and exact order for `PHA`, `PLA`, `PHP`, `PLP`, `JSR`, `RTS`, `BRK`, `RTI`, NMI, and IRQ.
-- [ ] Implement realistic reset state: load the reset vector, set the interrupt-disable flag, and initialize the stack pointer.
+- [x] Implement realistic reset state: load the reset vector, set the interrupt-disable flag, and initialize the stack pointer.
 
 ### Instructions and addressing
 
-- [ ] Verify all 56 official 6502 instructions and all official addressing modes.
-- [ ] Fix zero-page indexed addressing so it wraps within `$00-$FF`.
-- [ ] Fix indirect addressing wraparound, including the 6502 `JMP ($xxFF)` page-wrap behavior.
-- [ ] Verify `(indirect,X)` and `(indirect),Y` pointer reads and zero-page wrapping.
-- [ ] Make memory versions of shifts and rotates write back to memory rather than the accumulator.
-- [ ] Verify `BIT`: Z comes from `A & value`, while N and V come directly from bits 7 and 6 of the memory value.
-- [ ] Verify compare instructions without implementing them by temporarily mutating the accumulator or carry flag.
-- [ ] Ensure loads, transfers, increments, decrements, shifts, and pulls update N and Z exactly where required.
+- [x] Verify all 56 official 6502 instructions and all official addressing modes against the official portion of `nestest`.
+- [x] Fix zero-page indexed addressing so it wraps within `$00-$FF`.
+- [x] Fix indirect addressing wraparound, including the 6502 `JMP ($xxFF)` page-wrap behavior.
+- [x] Verify `(indirect,X)` and `(indirect),Y` pointer reads and zero-page wrapping.
+- [x] Make memory versions of shifts and rotates write back to memory rather than the accumulator.
+- [x] Verify `BIT`: Z comes from `A & value`, while N and V come directly from bits 7 and 6 of the memory value.
+- [x] Verify compare instructions without implementing them by temporarily mutating the accumulator or carry flag.
+- [x] Ensure loads, transfers, increments, decrements, shifts, and pulls update N and Z exactly where required.
 - [ ] Implement `BRK` as an interrupt instead of treating it only as a permanent halt.
-- [ ] Treat unofficial opcodes as a later compatibility task. Super Mario Bros. does not require them.
+- [x] Defer unofficial opcodes as a later compatibility task. Super Mario Bros. does not require them.
 
 ### Timing
 
-- [ ] Track the base cycle count for every official opcode.
-- [ ] Add the taken-branch cycle and page-crossing branch cycle.
-- [ ] Add page-crossing cycles for indexed read instructions where required.
-- [ ] Let the CPU finish an instruction and report how many CPU cycles it consumed. This is simpler to learn from than a micro-operation engine and is sufficient for the first emulator milestone.
+- [x] Track the base cycle count for every official opcode.
+- [x] Add the taken-branch cycle and page-crossing branch cycle.
+- [x] Add page-crossing cycles for indexed read instructions where required.
+- [x] Let the CPU finish an instruction and report how many CPU cycles it consumed. This is simpler to learn from than a micro-operation engine and is sufficient for the first emulator milestone.
 - [ ] Service pending NMI/IRQ at instruction boundaries with the correct vectors and stack state.
 
 Checkpoint:
 
-- [ ] Match the official-instruction portion of `nestest.log` starting at `$C000`.
+- [x] Match all 5,003 entries in the official-instruction portion of `nestest.log` starting at `$C000`.
 - [ ] Pass the official-opcode portions of `instr_test-v5`.
-- [ ] Pass a branch timing test before depending on sprite-0 timing.
+- [x] Pass branch timing tests for not-taken, taken, and page-crossing branches before depending on sprite-0 timing.
 
 ## Milestone 2: correct the cartridge loader and buses
 
@@ -88,13 +90,13 @@ Explicit `Read(address)` and `Write(address, value)` methods will be much easier
 ### iNES and NROM
 
 - [ ] Parse and validate all four magic bytes: `NES` followed by `$1A`.
-- [ ] Correct the current off-by-one PRG-ROM and CHR-ROM slices. Data begins after the 16-byte header, not at byte 15.
+- [ ] Finish correcting PRG-ROM and CHR-ROM slices. PRG data now starts after the 16-byte header; verify and correct the remaining CHR slice calculation.
 - [ ] Honor the optional 512-byte trainer when calculating data offsets.
 - [ ] Parse mapper number, nametable mirroring, battery flag, PRG size, and CHR size from the header.
 - [ ] Reject unsupported mappers with a clear message.
 - [ ] Implement mapper 0/NROM correctly:
-  - [ ] 16 KiB PRG-ROM mirrors into both `$8000-$BFFF` and `$C000-$FFFF`.
-  - [ ] 32 KiB PRG-ROM maps directly across `$8000-$FFFF`.
+  - [x] 16 KiB PRG-ROM mirrors into both `$8000-$BFFF` and `$C000-$FFFF`.
+  - [x] 32 KiB PRG-ROM maps directly across `$8000-$FFFF`.
   - [ ] 8 KiB CHR-ROM maps at PPU `$0000-$1FFF`.
   - [ ] If CHR size is zero, allocate 8 KiB of writable CHR-RAM.
 - [ ] Add unit tests for 16 KiB and 32 KiB NROM mapping and both mirroring modes.
@@ -240,11 +242,11 @@ Checkpoint:
 
 ## What to do next
 
-Start with Milestone 0, then the first three CPU-state tasks in Milestone 1:
+The official instruction core now agrees with the official portion of `nestest`, so stop polishing ordinary opcodes and move toward the memory and PPU work needed to boot a game:
 
-1. Fix `CLD` and `RTI` until the current suite is green.
-2. Replace the status-register representation so flag reads are harmless and bit positions are obvious.
-3. Correct all stack accesses to use page `$0100`.
-4. Add a `nestest` trace comparison and use the first mismatching line as the next small problem.
+1. Implement and test CPU interrupt entry for `BRK`, NMI, and IRQ. Reuse the existing stack helpers and keep interrupt servicing at instruction boundaries.
+2. Finish iNES parsing and CHR extraction, including trainer handling, mapper validation, mirroring metadata, and CHR-RAM allocation.
+3. Replace the `ref byte` bus API with explicit reads and writes so PPU and controller registers can have side effects.
+4. Implement the PPU bus and its nametable/palette mirroring before implementing PPU registers and frame timing.
 
-Do not start the PPU until the official portion of `nestest` agrees with the reference trace. That checkpoint will save a great deal of confusing cross-component debugging later.
+`instr_test-v5` remains a useful optional second opinion on the CPU, but it should not block beginning the cartridge/bus work. Return to ordinary CPU opcode work only if a focused test ROM exposes a specific defect.

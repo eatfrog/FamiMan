@@ -47,8 +47,18 @@ namespace FamiMan.Core
         public bool Waiting = false;
         private bool _breaked = false;
         private Opcode _currentOpcode;
+        private bool NmiPending { get; set; }
+        private bool IrqPending { get; set; }
 
         public long Ticks => _ticks;
+
+        public void RequestInterrupt(InterruptType type)
+        {
+            if (type == InterruptType.NMI)
+                NmiPending = true;
+            else
+                IrqPending = true;
+        }
 
         public void Reset()
         {
@@ -84,8 +94,17 @@ namespace FamiMan.Core
 
                 if (_currentOpcode.IsBrk())
                 {
-                    _breaked = true;
-                    P.Break = true;
+                    if (!_breaked)
+                    {
+                        _breaked = true;
+                        P.Break = true;
+                        PushWord((ushort)(PC + 2));
+                        PushByte((byte)(P.AsByte() | 0x30)); // 0x30 sets both bit 5 and the B bit
+                        PC = (ushort)(_bus[0xfffe] + (_bus[0xffff] << 8));
+                        P.InterruptsDisabled = true;
+                        _cyclesRemaining = Opcodes.BRK.BRK_00.Cycles;
+                    }
+                    else _cyclesRemaining--;
                     return;
                 }
 
