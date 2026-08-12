@@ -56,7 +56,7 @@ namespace FamiMan.Core
             public static class Absolute_X
             {
                 public const int Length = 3;
-                public const int Cycles = 4;
+                public const int Cycles = 5;
                 public const byte Opcode = 0x9D;
                 public const MemoryMappingMode Mode = MemoryMappingMode.Absolute;
             }
@@ -64,7 +64,7 @@ namespace FamiMan.Core
             public static class Absolute_Y
             {
                 public const int Length = 3;
-                public const int Cycles = 4;
+                public const int Cycles = 5;
                 public const byte Opcode = 0x99;
                 public const MemoryMappingMode Mode = MemoryMappingMode.Absolute;
             }
@@ -81,7 +81,7 @@ namespace FamiMan.Core
             {
                 public const byte Opcode = 0x91;
                 public const int Length = 2;
-                public const int Cycles = 5;
+                public const int Cycles = 6;
                 public const MemoryMappingMode Mode = MemoryMappingMode.IndirectIndexed;
             }
 

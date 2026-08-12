@@ -143,7 +143,7 @@
             {
                 public const byte Opcode = 0xEA;
                 public const int Length = 1;
-                public const int Cycles = 1;
+                public const int Cycles = 2;
             }
 
             public static class NOP_FA

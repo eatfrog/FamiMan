@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Reflection.Emit;
 
 namespace FamiMan.Core
 {
@@ -42,9 +43,10 @@ namespace FamiMan.Core
         private const byte ZERO = 0;
 
         private long _ticks = 0;
-        private long _nextInstruction = 0;
+        private long _cyclesRemaining = 0;
         public bool Waiting = false;
         private bool _breaked = false;
+        private Opcode _currentOpcode;
 
         public long Ticks => _ticks;
 
@@ -71,34 +73,154 @@ namespace FamiMan.Core
         {
             _ticks++;
             if (_breaked) return;
-            Opcode opcode = Opcodes.Find(_bus[PC]);
+
+            // If we are not waiting for the current instruction to finish, we need to fetch the next opcode and start executing it
             if (!Waiting)
             {
-                if (opcode.IsKil()) throw new CpuException("Kil instruction. System halted.");
-                if (opcode.IsNop())
-                {
-                    PC += (ushort)opcode.Length;
-                    return;
-                }
-                if (opcode.IsBrk())
+                // Get next opcode
+                _currentOpcode = Opcodes.Find(_bus[PC]);
+
+                if (_currentOpcode.IsKil()) throw new CpuException("Kil instruction. System halted.");
+
+                if (_currentOpcode.IsBrk())
                 {
                     _breaked = true;
                     P.Break = true;
                     return;
                 }
-                _nextInstruction = opcode.Cycles - 1;
+
+                // Calculate the number of cycles needed for this instruction, including any extra cycles due to page boundary crossings or other factors
+                int extraCycles = CalculateExtraCycles(_currentOpcode);
+                _cyclesRemaining = _currentOpcode.Cycles + extraCycles - 1;
                 Waiting = true;
             }
             else
-                _nextInstruction--;
-
-
-            if (_nextInstruction == 0)
             {
-                Waiting = false;
-                ExecuteNextInstruction(opcode);
+                _cyclesRemaining--;
             }
 
+
+            if (_cyclesRemaining == 0)
+            {
+                Waiting = false;
+
+                ExecuteNextInstruction(_currentOpcode);
+
+
+            }
+
+        }
+
+        private int CalculateExtraCycles(Opcode currentOpcode)
+        {
+            if (IsBranch(currentOpcode))
+                return CalculateBranchExtraCycles(currentOpcode);
+
+            if (IsIndexedRead(currentOpcode))
+                return IndexedAddressCrossesPage(currentOpcode) ? 1 : 0;
+
+            return 0;
+        }
+
+        private bool IndexedAddressCrossesPage(Opcode opcode)
+        {
+            // The instruction's operand starts immediately after the opcode.
+            // We first calculate the unindexed address encoded by that operand,
+            // then add X or Y separately so the two addresses can be compared.
+            ushort baseAddress;
+            ushort indexedAddress;
+
+            switch (opcode.AddressingMode)
+            {
+                case AddressingMode.AbsoluteX:
+                    // Example: LDA $20FF,X. The two operand bytes encode $20FF.
+                    baseAddress = GetWord((ushort)(PC + 1));
+                    indexedAddress = (ushort)(baseAddress + X);
+                    break;
+
+                case AddressingMode.AbsoluteY:
+                    // Absolute,Y works the same way, but uses the Y register.
+                    baseAddress = GetWord((ushort)(PC + 1));
+                    indexedAddress = (ushort)(baseAddress + Y);
+                    break;
+
+                case AddressingMode.IndirectIndexed:
+                    // Example: LDA ($10),Y. The operand is a zero-page pointer.
+                    // Follow the pointer to get the base address before adding Y.
+                    byte pointerAddress = _bus[(ushort)(PC + 1)];
+                    baseAddress = GetZeroPageWord(pointerAddress);
+                    indexedAddress = (ushort)(baseAddress + Y);
+                    break;
+
+                default:
+                    return false;
+            }
+
+            // Each page is $100 bytes. Therefore, a changed upper byte means
+            // indexing moved the effective address into a different page.
+            return CrossesPageBoundary(baseAddress, indexedAddress);
+        }
+
+        private int CalculateBranchExtraCycles(Opcode opcode)
+        {
+            // Determine whether the branch is taken based on the current status flags.
+            bool branchTaken = opcode.Instruction switch
+            {
+                Instruction.BCC => !P.Carry,
+                Instruction.BCS => P.Carry,
+                Instruction.BEQ => P.Zero,
+                Instruction.BNE => !P.Zero,
+                Instruction.BMI => P.Negative,
+                Instruction.BPL => !P.Negative,
+                Instruction.BVC => !P.Overflow,
+                Instruction.BVS => P.Overflow,
+                _ => false
+            };
+
+            // A branch that is not taken uses only its normal two cycles.
+            if (!branchTaken)
+                return 0;
+
+            // Branch offsets are relative to the instruction after the branch.
+            ushort nextInstruction = (ushort)(PC + opcode.Length);
+
+            // The operand is a signed 8-bit offset, allowing backward branches.
+            sbyte offset = unchecked((sbyte)_bus[(ushort)(PC + 1)]);
+            ushort targetAddress = (ushort)(nextInstruction + offset);
+
+            // Taking the branch adds one cycle. Crossing a page adds one more.
+            return CrossesPageBoundary(nextInstruction, targetAddress) ? 2 : 1;
+        }
+
+        private bool IsIndexedRead(Opcode opcode)
+        {
+            bool isReadInstruction = opcode.Instruction is
+                Instruction.ADC or
+                Instruction.AND or
+                Instruction.CMP or
+                Instruction.EOR or
+                Instruction.LDA or
+                Instruction.LDX or
+                Instruction.LDY or
+                Instruction.ORA or
+                Instruction.SBC;
+
+            bool canCrossPage = opcode.AddressingMode is
+                AddressingMode.AbsoluteX or
+                AddressingMode.AbsoluteY or
+                AddressingMode.IndirectIndexed;
+
+            return isReadInstruction && canCrossPage;
+        }
+
+        private bool IsBranch(Opcode opcode)
+        {
+            return opcode is { Instruction: Instruction.BCC or Instruction.BCS or Instruction.BEQ or Instruction.BNE or Instruction.BMI or Instruction.BPL or Instruction.BVC or Instruction.BVS };
+        }
+
+        private static bool CrossesPageBoundary(ushort original, ushort result)
+        {
+            return (original & 0xFF00) != (result & 0xFF00);
         }
 
         public void Tick(int ticks)
@@ -177,7 +299,6 @@ namespace FamiMan.Core
                         }
                         else
                         {
-                            P.Overflow = (val & (1 << 6)) != 0;
                             SetNegativeFlag(result);
                             SetZeroFlag(result);
                         }
@@ -326,39 +447,33 @@ namespace FamiMan.Core
                     break;
                 case Instruction.DEX:
                     X--;
-                    if (X == 0)
-                        P.Zero = true;
-                    else P.Zero = false;
+                    SetZeroFlag(X);
+                    SetNegativeFlag(X);
                     break;
                 case Instruction.INX:
                     X++;
-                    if (X == 0)
-                        P.Zero = true;
-                    else P.Zero = false;
+                    SetZeroFlag(X);
+                    SetNegativeFlag(X);
                     break;
                 case Instruction.TAY:
                     Y = A;
-                    P.Zero = Y == 0;
+                    SetZeroFlag(Y);
                     SetNegativeFlag(Y);
                     break;
                 case Instruction.TYA:
                     A = Y;
-                    P.Zero = A == 0;
+                    SetZeroFlag(A);
                     SetNegativeFlag(A);
                     break;
                 case Instruction.DEY:
-                    if (Y == 0) P.Negative = true;
-                    else P.Negative = false;
                     Y--;
-                    if (Y == 0)
-                        P.Zero = true;
-                    else P.Zero = false;
+                    SetNegativeFlag(Y);
+                    SetZeroFlag(Y);
                     break;
                 case Instruction.INY:
                     Y++;
-                    if (Y == 0)
-                        P.Zero = true;
-                    else P.Zero = false;
+                    SetZeroFlag(Y);
+                    SetNegativeFlag(Y);
                     break;
                 case Instruction.CLC:
                     P.Carry = false;
@@ -424,7 +539,7 @@ namespace FamiMan.Core
                             uint oldPC = PC;
                             PC = (ushort)(_bus[addr] | (ushort)(_bus[hi] << 8));
 
-                            if ((oldPC & 0xFF00) != (PC & 0xFF00)) _nextInstruction += 2;
+                            if ((oldPC & 0xFF00) != (PC & 0xFF00)) _cyclesRemaining += 2;
                         }
                         else
                         {
@@ -457,6 +572,8 @@ namespace FamiMan.Core
                         P.Decimal = true;
                         break;
                     }
+                case Instruction.NOP:
+                    break;
                 default:
                     throw new NotImplementedException("Opcode not implemented");
             }
@@ -635,6 +752,9 @@ namespace FamiMan.Core
 
             public void FromByte(byte input)
             {
+                input |= 0x20;  // bit 5 is always represented as set
+                input &= 0xEF;  // bit 4/B is not a persistent CPU flag
+
                 // check each bit in the byte. if 1 set to true, if 0 set to false
                 for (int i = 0; i < 8; i++)
                     _s[i] = (input & (1 << i)) != 0;

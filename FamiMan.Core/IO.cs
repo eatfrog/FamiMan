@@ -64,16 +64,7 @@ namespace FamiMan.Core
             int prgrom_size = file[4];
             int chrrom_size = file[5];
             PRGROM = new byte[prgrom_size * 16384];
-            PRGROM = file[(HEADER_LEN - 1) .. (HEADER_LEN + prgrom_size * 16384 - 1)];
-
-            //if (prgrom_size == 2)
-            //{
-            //    byte[] temp = new byte[PRGROM.Length];
-            //    Array.Copy(PRGROM, temp, PRGROM.Length);
-            //    PRGROM = new byte[PRGROM.Length * 2];
-            //    Array.Copy(temp, 0, PRGROM, 0, temp.Length);
-            //    Array.Copy(temp, 0, PRGROM, temp.Length - 1, temp.Length);
-            //}
+            PRGROM = file[(HEADER_LEN) .. (HEADER_LEN + prgrom_size * 16384)];
 
             CHRROM = new byte[chrrom_size * 8192];
             CHRROM = file[(HEADER_LEN + PRGROM.Length - 1) .. (HEADER_LEN + PRGROM.Length + (chrrom_size * 8192) - 1)];

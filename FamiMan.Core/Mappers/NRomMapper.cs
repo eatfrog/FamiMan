@@ -61,10 +61,11 @@ namespace FamiMan.Core.Mappers
                 {
                     int timesMirrored = index / IO.PRGROM.Length;
                     int realIndex = index - (IO.PRGROM.Length * timesMirrored);
-                    return ref IO.PRGROM[realIndex + 1]; // FIXME: why +1?
+                    return ref IO.PRGROM[realIndex];
                 }
 
-                return ref IO.PRGROM[index];
+                int prgIndex = (index - 0x8000) % IO.PRGROM.Length;
+                return ref IO.PRGROM[prgIndex];
             }
             else
             {
