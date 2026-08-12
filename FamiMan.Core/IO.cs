@@ -67,10 +67,13 @@ namespace FamiMan.Core
             PRGROM = file[(HEADER_LEN) .. (HEADER_LEN + prgrom_size * 16384)];
 
             CHRROM = new byte[chrrom_size * 8192];
-            CHRROM = file[(HEADER_LEN + PRGROM.Length - 1) .. (HEADER_LEN + PRGROM.Length + (chrrom_size * 8192) - 1)];
+            int chrStart = HEADER_LEN + PRGROM.Length;
+            int chrEnd = chrStart + chrrom_size * 8192;
 
-            var rest = file[(HEADER_LEN + PRGROM.Length + CHRROM.Length - 1)..];
-
+            CHRROM = chrrom_size == 0
+                ? new byte[8_192]
+                : file[chrStart..chrEnd];
+            
             return new Rom { FileLength = new FileInfo(path).Length, Type = RomType.INES, PRGROM_Size = prgrom_size, CHRROM_Size = chrrom_size };
         }
     }

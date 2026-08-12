@@ -49,9 +49,16 @@ namespace FamiMan.Core.Mappers
                 return ref Ram.AsSpan()[index - 0x1000];
             else if (index >= 0x1800 && index <= 0x1FFF)
                 return ref Ram.AsSpan()[index - 0x1800];
-            else if (index >= 0x2000 && index <= 0x2007)
-                return ref GetPPUByteAtAddress(index);
-            else if (index >= 0x4000 && index <= 0x4014)
+            else if (index >= 0x2000 && index <= 0x3FFF)
+            {
+                ushort registerAddress =
+                    (ushort)(0x2000 + ((index - 0x2000) % 8));
+
+                return ref GetPPUByteAtAddress(registerAddress);
+            }
+            else if (index == 0x4014)
+                return ref PPU.Register.Registers[8];
+            else if (index >= 0x4000 && index <= 0x4013)
                 return ref APU.Registers[index];
             else if (index >= 0x6000 && index <= 0x7FFF)
                 return ref _sram.AsSpan()[index - 0x6000];
