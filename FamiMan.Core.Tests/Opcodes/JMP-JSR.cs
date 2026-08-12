@@ -46,17 +46,18 @@ namespace FamiMan.Core.Tests.Opcodes
         [Fact]
         public void JSR_0x20_Absolute()
         {
-            byte i = 0;
-            _c.SP = 0x10;
-            _b.Ram[i++] = NOP.NOP_14.Opcode;
-            _c.Tick(1);
-            _b.Ram[i++] = JSR.Absolute.Opcode;
-            _b.Ram[i++] = 0x10;
-            _b.Ram[i++] = 0x01; // Jump to 0x110
-            _c.Tick(JSR.Absolute.Cycles);
-            Assert.Equal(0x110, _c.PC);
+            _c.PC = 0x0200;
+            _c.SP = 0xFD;
+            _b[0x0200] = JSR.Absolute.Opcode;
+            _b[0x0201] = 0x10;
+            _b[0x0202] = 0x01; // Jump to 0x0110
 
-            Assert.Equal(3, _b.Ram[(byte)(_c.SP + 1)]);
+            _c.Tick(JSR.Absolute.Cycles);
+
+            Assert.Equal(0x110, _c.PC);
+            Assert.Equal(0x02, _b[0x01FD]); // high byte of return address $0202
+            Assert.Equal(0x02, _b[0x01FC]); // low byte of return address $0202
+            Assert.Equal(0xFB, _c.SP);
         }
 
     }

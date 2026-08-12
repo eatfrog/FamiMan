@@ -26,10 +26,10 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = BIT.ZeroPage.Opcode;    // BIT
             _b.Ram[i++] = 0x0A;                           // Memory location 0x0A
             _b.Ram[0x0A] = 0xA0;
-            _c.Tick(AND.ZeroPage.Cycles);
+            _c.Tick(BIT.ZeroPage.Cycles);
 
             Assert.False(_c.P.Zero);
-            Assert.True(_c.P.Overflow);
+            Assert.False(_c.P.Overflow);
             Assert.True(_c.P.Negative);
             Assert.Equal(160, _c.A);
         }
@@ -44,10 +44,10 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = 0x01;                           // Memory location 0x010A
 
             _b.Ram[0x10A] = 0xA0;
-            _c.Tick(AND.Absolute.Cycles);
+            _c.Tick(BIT.Absolute.Cycles);
 
             Assert.False(_c.P.Zero);
-            Assert.True(_c.P.Overflow);
+            Assert.False(_c.P.Overflow);
             Assert.True(_c.P.Negative);
             Assert.Equal(160, _c.A);
         }

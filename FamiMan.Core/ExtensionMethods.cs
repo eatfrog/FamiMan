@@ -22,11 +22,33 @@ namespace FamiMan.Core
             return (int)t.GetField("Cycles").GetValue(t);
         }
 
-        public static bool IsKil(this Opcode t) => t.OpcodeName == "KIL";
+        public static bool IsKil(this Opcode t) => t.Instruction == Instruction.KIL;
 
-        public static bool IsNop(this Opcode t) => t.OpcodeName == "NOP";
+        public static bool IsNop(this Opcode t) => t.Instruction == Instruction.NOP;
 
-        public static bool IsBrk(this Opcode t) => t.OpcodeName == "BRK" || t.OpcodeName == "BRK_00";
+        public static bool IsBrk(this Opcode t) => t.Instruction == Instruction.BRK;
+
+        public static AddressingMode GetAddressingMode(this Type type)
+        {
+            return type.Name switch
+            {
+                "Accumulator" => AddressingMode.Accumulator,
+                "Immediate" => AddressingMode.Immediate,
+                "ZeroPage" => AddressingMode.ZeroPage,
+                "ZeroPage_X" => AddressingMode.ZeroPageX,
+                "ZeroPage_Y" => AddressingMode.ZeroPageY,
+                "Absolute" => AddressingMode.Absolute,
+                "Absolute_X" => AddressingMode.AbsoluteX,
+                "Absolute_Y" => AddressingMode.AbsoluteY,
+                "Indirect" => AddressingMode.Indirect,
+                "IndexedIndirect" => AddressingMode.IndexedIndirect,
+                "IndirectIndexed" => AddressingMode.IndirectIndexed,
+                "Implied" => AddressingMode.Implied,
+                _ when type.DeclaringType == typeof(Opcodes.Branches) => AddressingMode.Relative,
+                _ when type.Name.Length == 3 => AddressingMode.Implied,
+                _ => AddressingMode.Unknown
+            };
+        }
 
         public static MemoryMappingMode GetMemoryMappingMode(this Type t)
         {

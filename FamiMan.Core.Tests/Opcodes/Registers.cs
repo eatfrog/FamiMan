@@ -22,22 +22,26 @@ namespace FamiMan.Core.Tests.Opcodes
         public void TAX_0xAA()
         {
             byte i = 0;
-            _c.A = 0x14;
+            _c.A = 0x80;
             _b.Ram[i++] = Registers.TAX.Opcode;
             _c.Tick(Registers.TAX.Cycles);
 
-            Assert.Equal(0x14, _c.X);
+            Assert.Equal(0x80, _c.X);
+            Assert.True(_c.P.Negative);
+            Assert.False(_c.P.Zero);
         }
 
         [Fact]
         public void TXA_0x8A()
         {
             byte i = 0;
-            _c.X = 0x14;
+            _c.X = 0;
             _b.Ram[i++] = Registers.TXA.Opcode;
             _c.Tick(Registers.TXA.Cycles);
 
-            Assert.Equal(0x14, _c.A);
+            Assert.Equal(0, _c.A);
+            Assert.True(_c.P.Zero);
+            Assert.False(_c.P.Negative);
         }
 
         [Fact]
@@ -80,44 +84,52 @@ namespace FamiMan.Core.Tests.Opcodes
         public void TAY_0xA8()
         {
             byte i = 0;
-            _c.A = 0x14;
+            _c.A = 0;
             _b.Ram[i++] = Registers.TAY.Opcode;
             _c.Tick(Registers.TAY.Cycles);
 
-            Assert.Equal(0x14, _c.Y);
+            Assert.Equal(0, _c.Y);
+            Assert.True(_c.P.Zero);
+            Assert.False(_c.P.Negative);
         }
 
         [Fact]
         public void TYA_0x98()
         {
             byte i = 0;
-            _c.Y = 0x14;
+            _c.Y = 0x80;
             _b.Ram[i++] = Registers.TYA.Opcode;
             _c.Tick(Registers.TYA.Cycles);
 
-            Assert.Equal(0x14, _c.A);
+            Assert.Equal(0x80, _c.A);
+            Assert.True(_c.P.Negative);
+            Assert.False(_c.P.Zero);
         }
 
         [Fact]
         public void INY_0xC8()
         {
             byte i = 0;
-            _c.Y = 0x14;
+            _c.Y = 0xFF;
             _b.Ram[i++] = Registers.INY.Opcode;
             _c.Tick(Registers.INY.Cycles);
 
-            Assert.Equal(0x15, _c.Y);
+            Assert.Equal(0, _c.Y);
+            Assert.True(_c.P.Zero);
+            Assert.False(_c.P.Negative);
         }
 
         [Fact]
         public void DEY_0x88()
         {
             byte i = 0;
-            _c.Y = 0x14;
+            _c.Y = 0;
             _b.Ram[i++] = Registers.DEY.Opcode;
             _c.Tick(Registers.DEY.Cycles);
 
-            Assert.Equal(0x13, _c.Y);
+            Assert.Equal(0xFF, _c.Y);
+            Assert.True(_c.P.Negative);
+            Assert.False(_c.P.Zero);
         }
     }
 }

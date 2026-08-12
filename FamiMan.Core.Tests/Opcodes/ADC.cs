@@ -26,84 +26,35 @@ namespace FamiMan.Core.Tests.Opcodes
             _c = new Cpu(_b);
         }
 
-        [Fact]
-        public void ADC_0x69_Immediate()
+        [Theory]
+        [InlineData(0x00, 0x01, false, 0x01, false, false, false, false)]
+        [InlineData(0x03, 0x01, true,  0x05, false, false, false, false)]
+        [InlineData(0x50, 0x50, false, 0xA0, false, true,  true,  false)]
+        [InlineData(0xD0, 0x90, false, 0x60, true,  true,  false, false)]
+        [InlineData(0x01, 0xFF, false, 0x00, true,  false, false, true)]
+        public void ADC_0x69_Immediate(
+            byte accumulator,
+            byte operand,
+            bool carryIn,
+            byte expectedResult,
+            bool expectedCarry,
+            bool expectedOverflow,
+            bool expectedNegative,
+            bool expectedZero)
         {
-            byte i = 0;
-            _b.Ram[i++] = ADC.Immediate.Opcode;     // Add
-            _b.Ram[i++] = 0x01;                             // 1
-            _b.Ram[i++] = ADC.Immediate.Opcode;     // Add again
-            _b.Ram[i++] = 0x02;                             // 2
-            _c.Tick(ADC.Immediate.Cycles);          // Tick
-            Assert.Equal(1, _c.A);                          // Accumulator should be 1
-            Assert.Equal(2, _c.PC);                         // Program counter should have moved to 2
-            _c.Tick(ADC.Immediate.Cycles);          // Tick
-            Assert.Equal(3, _c.A);                          // Accumulator should have 2 more now = 3
+            _c.A = accumulator;
+            _c.P.Carry = carryIn;
+            _b.Ram[0] = ADC.Immediate.Opcode;
+            _b.Ram[1] = operand;
 
-            _c.P.Carry = true;                              // Set carry flag since we want to add one more
-            _b.Ram[i++] = ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0x01;                             // So value is 1, we expect 2 more
-            _c.Tick(ADC.Immediate.Cycles);          // Tick
-            Assert.Equal(5, _c.A);                          // From 3 to 5
+            _c.Tick(ADC.Immediate.Cycles);
 
-            _c.A = 0x50;                                    // Set to 80
-            _b.Ram[i++] = ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0x50;                             // Lets add 80
-            _c.Tick(ADC.Immediate.Cycles);          // Tick
-
-            Assert.Equal(160, _c.A);         // 160 in Acc
-            Assert.False(_c.P.Carry);        // 0 in carry
-
-            // ______ OVERFLOW FLAG ________
-            // We moved from 0-128 <-> 129-255 range
-            Assert.True(_c.P.Overflow);
-
-            _c.A = 0xd0;
-            _b.Ram[i++] = ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0x90;
-            _c.Tick(ADC.Immediate.Cycles);  // Tick
-            Assert.Equal(96, _c.A);
-            Assert.True(_c.P.Overflow);     // 1 in overflow
-            Assert.True(_c.P.Carry);
-
-            _b.Ram[i++] = ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0x01;             // Lets add 1
-            _c.Tick(ADC.Immediate.Cycles);  // Tick
-            Assert.Equal(0x61, _c.A);
-            Assert.False(_c.P.Overflow);    // 0 in overflow
-            Assert.False(_c.P.Negative);
-
-            _c.A = 1;                        // Reset
-            _b.Ram[i++] = ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0x01;              // Lets add 1
-            _c.Tick(ADC.Immediate.Cycles);  // Tick
-            Assert.Equal(2, _c.A);           // 2 in A
-            Assert.False(_c.P.Negative);     // 0 in negative
-
-            _b.Ram[i++] = ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0x80;              // Lets add 128
-            _c.Tick(ADC.Immediate.Cycles);  // Tick
-            Assert.Equal(130, _c.A);         // 130 in A, 2 + 128
-            Assert.True(_c.P.Negative);      // 1 in negative
-
-            // ________ ZERO FLAG _______
-            // Result is 0
-            Assert.False(_c.P.Zero);
-
-            _c.A = 0;                        // Reset
-            _b.Ram[i++] = ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0x00;              // Lets add 0
-            _c.Tick(ADC.Immediate.Cycles);  // Tick
-            Assert.Equal(0, _c.A);           // 0 in A
-            Assert.True(_c.P.Zero);          // 1 in zero
-
-            _c.A = 1;                        // Reset
-            _b.Ram[i++] = ADC.Immediate.Opcode;
-            _b.Ram[i++] = 0xFF;              // Lets add 255
-            _c.Tick(ADC.Immediate.Cycles);  // Tick
-
-            Assert.Equal(0, _c.A);           // 0 in A
-            Assert.True(_c.P.Zero);          // 1 in zero
+            Assert.Equal(expectedResult, _c.A);
+            Assert.Equal(ADC.Immediate.Length, _c.PC);
+            Assert.Equal(expectedCarry, _c.P.Carry);
+            Assert.Equal(expectedOverflow, _c.P.Overflow);
+            Assert.Equal(expectedNegative, _c.P.Negative);
+            Assert.Equal(expectedZero, _c.P.Zero);
         }
 
         [Fact]

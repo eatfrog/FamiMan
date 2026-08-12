@@ -1,8 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Xunit;
 using static FamiMan.Core.Opcodes;
 
@@ -10,153 +5,48 @@ namespace FamiMan.Core.Tests.Opcodes
 {
     public class LSRTests
     {
-        private Bus _b;
-        private Cpu _c;
-        public LSRTests()
+        [Theory]
+        [InlineData(LSR.ZeroPage.Opcode, LSR.ZeroPage.Cycles, 0x0010, 0)]
+        [InlineData(LSR.ZeroPage_X.Opcode, LSR.ZeroPage_X.Cycles, 0x0011, 1)]
+        [InlineData(LSR.Absolute.Opcode, LSR.Absolute.Cycles, 0x0310, 0)]
+        [InlineData(LSR.Absolute_X.Opcode, LSR.Absolute_X.Cycles, 0x0311, 1)]
+        public void LSRMemoryShiftsMemoryAndLeavesAccumulatorAlone(byte opcode, int cycles, int targetAddress, byte x)
         {
-            _b = new Bus();
-            _c = new Cpu(_b);
+            var bus = new Bus();
+            var cpu = bus.Cpu;
+            cpu.A = 0x55;
+            cpu.X = x;
+            bus.Ram[0] = opcode;
+            bus.Ram[1] = 0x10;
+            bus.Ram[2] = 0x03;
+            bus.Ram[(ushort)targetAddress] = 0x6D;
+
+            cpu.Tick(cycles);
+
+            Assert.Equal(0x36, bus.Ram[(ushort)targetAddress]);
+            Assert.Equal(0x55, cpu.A);
+            Assert.True(cpu.P.Carry);
+            Assert.False(cpu.P.Negative);
+            Assert.False(cpu.P.Zero);
         }
 
-        [Fact]
-        public void LSR_0x4E_Absolute()
+        [Theory]
+        [InlineData(0x6D, 0x36, true, false)]
+        [InlineData(0x80, 0x40, false, false)]
+        [InlineData(0x01, 0x00, true, true)]
+        public void LSRAccumulatorShiftsAccumulator(byte value, byte expected, bool carry, bool zero)
         {
-            byte i = 0;
-            _c.A = 0x05;
-            _b.Ram[i++] = LSR.Absolute.Opcode;
-            _b.Ram[i++] = 0x0E;
-            _b.Ram[i++] = 0x00; // Memory location 0x000E = 14
-            _b.Ram[0x0E] = 109; // 01101101
-            _c.Tick(LSR.Absolute.Cycles);
+            var bus = new Bus();
+            var cpu = bus.Cpu;
+            bus.Ram[0] = LSR.Accumulator.Opcode;
+            cpu.A = value;
 
-            // 0 -> 01101101
-            //      00110110
-            Assert.Equal(54, _c.A);
-            Assert.True(_c.P.Carry);
+            cpu.Tick(LSR.Accumulator.Cycles);
 
-            _b.Ram[i++] = LSR.Absolute.Opcode;
-            _b.Ram[i++] = 0x0E;
-            _b.Ram[i++] = 0x00; // Memory location 0x000E = 14
-            _b.Ram[0x0E] = 128; // 10000000
-            _c.Tick(LSR.Absolute.Cycles);
-
-            // 0 -> 10000000 
-            //      01000000 
-            Assert.Equal(64, _c.A);
-            Assert.False(_c.P.Carry);
-            Assert.False(_c.P.Zero);
+            Assert.Equal(expected, cpu.A);
+            Assert.Equal(carry, cpu.P.Carry);
+            Assert.False(cpu.P.Negative);
+            Assert.Equal(zero, cpu.P.Zero);
         }
-
-        [Fact]
-        public void LSR_0x5E_Absolute_X()
-        {
-            byte i = 0;
-            _c.A = 0x05;
-            _b.Ram[i++] = LSR.Absolute_X.Opcode;
-            _b.Ram[i++] = 0x0E;
-            _b.Ram[i++] = 0x00; // Memory location 0x000E = 14
-            _c.X = 1;           // plus one is 15
-            _b.Ram[0x0F] = 109; // 01101101
-            _c.Tick(ASL.Absolute_X.Cycles);
-
-            // 0 -> 01101101
-            //      00110110 
-            Assert.Equal(54, _c.A);
-            Assert.True(_c.P.Carry);
-
-            _b.Ram[i++] = LSR.Absolute_X.Opcode;
-            _b.Ram[i++] = 0x0E;
-            _b.Ram[i++] = 0x00; // Memory location 0x000E = 14
-            _c.X = 1;           // plus one is 15
-            _b.Ram[0x0F] = 128; // 10000000
-            _c.Tick(ASL.Absolute_X.Cycles);
-
-            // 0 -> 10000000 
-            //      01000000 
-            Assert.Equal(64, _c.A);
-            Assert.False(_c.P.Carry);
-            Assert.False(_c.P.Zero);
-        }
-
-        [Fact]
-        public void LSR_0x46_ZeroPage()
-        {
-            byte i = 0;
-            _c.A = 0x05;
-            _b.Ram[i++] = LSR.ZeroPage.Opcode;
-            _b.Ram[i++] = 0x0E; // Memory location 0x000E = 14
-            _b.Ram[0x0E] = 109; // 01101101
-            _c.Tick(LSR.ZeroPage.Cycles);
-
-            // 0 -> 01101101
-            //      00110110
-            Assert.Equal(54, _c.A);
-            Assert.True(_c.P.Carry);
-
-            _b.Ram[i++] = LSR.ZeroPage.Opcode;
-            _b.Ram[i++] = 0x0E; // Memory location 0x000E = 14
-            _b.Ram[0x0E] = 128; // 10000000
-            _c.Tick(ASL.ZeroPage.Cycles);
-
-            // 0 -> 10000000 
-            //      01000000 
-            Assert.Equal(64, _c.A);
-            Assert.False(_c.P.Carry);
-            Assert.False(_c.P.Zero);
-        }
-
-        [Fact]
-        public void LSR_0x56_ZeroPage_X()
-        {
-            byte i = 0;
-            _c.A = 0x05;
-            _b.Ram[i++] = LSR.ZeroPage_X.Opcode;
-            _b.Ram[i++] = 0x0E; // Memory location 0x000E = 14
-            _c.X = 1;           // plux one = 15
-            _b.Ram[0x0F] = 109; // 01101101
-            _c.Tick(LSR.ZeroPage_X.Cycles);
-
-            // 0 -> 01101101
-            //      00110110
-            Assert.Equal(54, _c.A);
-            Assert.True(_c.P.Carry);
-
-            _b.Ram[i++] = LSR.ZeroPage_X.Opcode;
-            _b.Ram[i++] = 0x0E; // Memory location 0x000E = 14
-            _c.X = 1;
-            _b.Ram[0x0f] = 128; // 10000000
-            _c.Tick(LSR.ZeroPage_X.Cycles);
-
-            // 0 -> 10000000 
-            //      01000000 
-            Assert.Equal(64, _c.A);
-            Assert.False(_c.P.Carry);
-            Assert.False(_c.P.Zero);
-        }
-
-        [Fact]
-        public void LSR_0x4A_Accumulator()
-        {
-            byte i = 0;
-            _b.Ram[i++] = LSR.Accumulator.Opcode;
-            _c.A = 109;           // 01101101
-            _c.Tick(LSR.Accumulator.Cycles);
-
-            // 0 -> 01101101
-            //      00110110
-            Assert.Equal(54, _c.A);
-            Assert.True(_c.P.Carry);
-
-            _b.Ram[i++] = LSR.Accumulator.Opcode;
-            _c.A = 128; // 10000000
-            _c.Tick(LSR.Accumulator.Cycles);
-
-            // 0 -> 10000000 
-            //      01000000 
-            Assert.Equal(64, _c.A);
-            Assert.False(_c.P.Carry);
-            Assert.False(_c.P.Zero);
-        }
-
     }
 }

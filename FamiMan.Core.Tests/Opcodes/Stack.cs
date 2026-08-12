@@ -23,19 +23,25 @@ namespace FamiMan.Core.Tests.Opcodes
         {
             byte i = 0;
             _c.X = 0x05;
+            _c.P.Zero = true;
+            _c.P.Negative = true;
             _b.Ram[i++] = Stack.TXS.Opcode;
             _c.Tick(Stack.TXS.Cycles);
             Assert.Equal(0x05, _c.SP);
+            Assert.True(_c.P.Zero);
+            Assert.True(_c.P.Negative);
         }
 
         [Fact]
         public void TSX_0xBA()
         {
             byte i = 0;
-            _c.SP = 0x05;
+            _c.SP = 0;
             _b.Ram[i++] = Stack.TSX.Opcode;
             _c.Tick(Stack.TSX.Cycles);
-            Assert.Equal(0x05, _c.X);
+            Assert.Equal(0, _c.X);
+            Assert.True(_c.P.Zero);
+            Assert.False(_c.P.Negative);
         }
 
         [Fact]
@@ -46,7 +52,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _c.SP = 0x04;
             _b.Ram[i++] = Stack.PHA.Opcode;
             _c.Tick(Stack.PHA.Cycles);
-            Assert.Equal(0x05, _b.Ram[0x04]);
+            Assert.Equal(0x05, _b.Ram[0x0104]);
             Assert.Equal(0x03, _c.SP);
         }
 
@@ -55,7 +61,7 @@ namespace FamiMan.Core.Tests.Opcodes
         {
             byte i = 0;
             _c.SP = 0x10;
-            _b.Ram[_c.SP] = 0xBC;
+            _b.Ram[0x0111] = 0xBC;
             _b.Ram[i++] = Stack.PLA.Opcode;
             _c.Tick(Stack.PLA.Cycles);
             Assert.Equal(0xBC, _c.A);
@@ -72,7 +78,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _c.SP = 0x04;
             _b.Ram[i++] = Stack.PHP.Opcode;
             _c.Tick(Stack.PHP.Cycles);
-            Assert.Equal(0x82, _b.Ram[0x04]);
+            Assert.Equal(0xB2, _b.Ram[0x0104]);
             Assert.Equal(0x03, _c.SP);
         }
 
@@ -81,7 +87,7 @@ namespace FamiMan.Core.Tests.Opcodes
         {
             byte i = 0;
             _c.SP = 0x10;
-            _b.Ram[_c.SP] = 0x82;
+            _b.Ram[0x0111] = 0x82;
             _b.Ram[i++] = Stack.PLP.Opcode;
             _c.Tick(Stack.PLP.Cycles);
             Assert.True(_c.P.Negative);

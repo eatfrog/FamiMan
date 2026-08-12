@@ -20,7 +20,7 @@ namespace FamiMan.Core
             Register = new PPURegister
             {
                 // Vblank always on
-                PPUSTATUS = 128
+                PPUSTATUS = 0b10000000 //128
             };
 
             /* The PPU addresses a 16kB space, $0000-3FFF, 
@@ -67,6 +67,11 @@ namespace FamiMan.Core
             {
                 throw new InvalidOperationException("Invalid memory address access in PPU");
             }
+        }
+
+        internal void Tick()
+        {
+            throw new NotImplementedException();
         }
     }
 

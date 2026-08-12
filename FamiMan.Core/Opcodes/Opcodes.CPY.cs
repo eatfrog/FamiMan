@@ -14,13 +14,11 @@ namespace FamiMan.Core
                 Zero Page     CPY $44       $C4  2   3
                 Absolute      CPY $4400     $CC  3   4
             */
-            public static Dictionary<byte, int> Lengths;
 
             public static Dictionary<byte, int> Cycles;
 
             static CPY()
             {
-                Lengths = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Length").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
                 Cycles = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Cycles").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
             }
 

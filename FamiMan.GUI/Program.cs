@@ -1,71 +1,52 @@
-﻿using FamiMan.Core;
+using FamiMan.Core;
 using FamiMan.GUI.UI;
-using SDL2;
-using static SDL2.SDL;
+using FamiMan.Platform;
 
 internal class Program
 {
     private static void Main(string[] args)
     {
-        if (SDL_Init(SDL_INIT_VIDEO) < 0)
-        {
-            Console.WriteLine("Unable to init sdl");
-            return;
-        }
-
-        SDL_ttf.TTF_Init();
-        SDL_CreateWindowAndRenderer(800, 800, SDL_WindowFlags.SDL_WINDOW_RESIZABLE, out IntPtr window, out IntPtr renderer);
-
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-        SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+        string fontPath = Path.Combine(AppContext.BaseDirectory, "Sans.ttf");
+        using var window = new GameWindow("FamiMan", 800, 800, fontPath);
 
         Bus bus = SetupNes();
         var cpu = bus.Cpu;
-
-        IntPtr font = SDL_ttf.TTF_OpenFont("c:\\windows\\fonts\\arial.ttf", 24);
-        SDL_Color white = new() { r = 255, g = 255, b = 255 };
-        SDL_Rect messageRect = new();
         var debugOverlay = new DebugOverlay();
-
-        SDL_Event e;
         bool quit = false;
 
         while (!quit)
         {
-            SDL_SetRenderDrawColor(renderer, 0, 0, 0, 0);
-            SDL_RenderClear(renderer);
+            window.Clear(Color.Black);
 
             cpu.Tick();
             debugOverlay.UpdateInstructionDebug(bus, cpu);
 
-            while (SDL_PollEvent(out e) != 0)
+            while (cpu.Waiting)
+                cpu.Tick();
+
+            while (window.PollEvent(out WindowEvent windowEvent))
             {
-                switch (e.type)
+                switch (windowEvent.Type)
                 {
-                    case SDL_EventType.SDL_QUIT:
+                    case WindowEventType.Quit:
                         quit = true;
                         break;
-                    case SDL_EventType.SDL_KEYDOWN:
-                        if (e.key.keysym.sym == SDL_Keycode.SDLK_q)
+                    case WindowEventType.KeyDown:
+                        if (windowEvent.Key is Key.Q or Key.Escape)
                         {
                             quit = true;
                             break;
                         }
 
-                        debugOverlay.HandleKeyDown(e.key.keysym.sym);
+                        debugOverlay.HandleKeyDown(windowEvent.Key);
                         break;
                 }
             }
 
-            debugOverlay.Render(renderer, messageRect, font, white, bus, cpu);
-            SDL_RenderPresent(renderer);
+            debugOverlay.Render(window, bus, cpu);
+            window.Present();
             Thread.Sleep(debugOverlay.WaitTime);
         }
-
-        SDL_DestroyRenderer(renderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
     }
 
     private static Bus SetupNes()

@@ -27,8 +27,10 @@ namespace FamiMan.Core.Tests
             _b.Ram[i++] = 0x10;
             _c.A = 6;
             _c.X = 0x10;
+            _c.P.Carry = false;
             _c.Tick(CPX.Immediate.Cycles);
             Assert.True(_c.P.Zero);
+            Assert.True(_c.P.Carry);
             Assert.Equal(6, _c.A);
         }
 
@@ -41,8 +43,10 @@ namespace FamiMan.Core.Tests
             _c.A = 6;
             _c.Y = 0x10;
             _c.X = 0x09;
+            _c.P.Carry = false;
             _c.Tick(CPY.Immediate.Cycles);
             Assert.True(_c.P.Zero);
+            Assert.True(_c.P.Carry);
             Assert.Equal(6, _c.A);
         }
 

@@ -22,10 +22,26 @@ namespace FamiMan.Core.Tests.Opcodes
         public void OpcodePopulatesLookupTable()
         {
             Opcode opcode = Find(0x61);
+            Assert.Equal(Instruction.ADC, opcode.Instruction);
+            Assert.Equal(AddressingMode.IndexedIndirect, opcode.AddressingMode);
+            Assert.Equal(2, opcode.Length);
             Assert.Equal(typeof(ADC.IndexedIndirect), opcode.BackingType);
             Assert.Equal(0x61, opcode.BackingType.GetOpcode());
             Assert.Equal(2, opcode.BackingType.GetLength());
             Assert.Equal(6, opcode.BackingType.GetCycles());
+        }
+
+        [Theory]
+        [InlineData(LDA.ZeroPage_X.Opcode, AddressingMode.ZeroPageX)]
+        [InlineData(LDA.Absolute_X.Opcode, AddressingMode.AbsoluteX)]
+        [InlineData(LDX.ZeroPage_Y.Opcode, AddressingMode.ZeroPageY)]
+        [InlineData(LDA.Absolute_Y.Opcode, AddressingMode.AbsoluteY)]
+        [InlineData(JMP.Indirect.Opcode, AddressingMode.Indirect)]
+        [InlineData(Branches.BNE.Opcode, AddressingMode.Relative)]
+        [InlineData(Registers.TAX.Opcode, AddressingMode.Implied)]
+        public void OpcodeHasTypeSafeAddressingMode(byte opcodeValue, AddressingMode expected)
+        {
+            Assert.Equal(expected, Find(opcodeValue).AddressingMode);
         }
 
         [Fact]
@@ -43,7 +59,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = NOP.NOP_04.Opcode;
             var pc = _c.PC;
             _c.Tick();
-            Assert.Equal(pc + 1, _c.PC);
+            Assert.Equal(pc + Find(NOP.NOP_04.Opcode).Length, _c.PC);
 
         }
     }

@@ -84,7 +84,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
             _c.Y = 1;               // Add 1 to the memory address
             _b.Ram[0x03E9] = 14;
-            _c.Tick(LDX.Absolute.Cycles);
+            _c.Tick(LDX.Absolute_Y.Cycles);
 
             Assert.Equal(14, _c.X);
         }

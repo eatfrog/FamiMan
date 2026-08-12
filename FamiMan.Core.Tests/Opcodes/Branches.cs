@@ -51,15 +51,15 @@ namespace FamiMan.Core.Tests.Opcodes
             var prevPc = _c.PC;
             _b.Ram[i++] = Branches.BEQ.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC + 14
-            _c.Tick(Branches.BCS.Cycles);
+            _c.Tick(Branches.BEQ.Cycles);
             Assert.Equal(prevPc + Branches.BEQ.Length + 14 , _c.PC);
 
             i = (byte)_c.PC;
             _c.P.Zero = false;
             _b.Ram[i++] = Branches.BEQ.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
-            _c.Tick(Branches.BCS.Cycles);
-            Assert.Equal(i, _c.PC);
+            _c.Tick(Branches.BEQ.Cycles);
+            Assert.Equal(i + Branches.BEQ.Length, _c.PC);
         }
 
         [Fact]
@@ -71,7 +71,7 @@ namespace FamiMan.Core.Tests.Opcodes
             int prevPc = _c.PC;
             _b.Ram[i++] = Branches.BNE.Opcode;
             _b.Ram[i++] = 0x06; // Move PC + 6
-            _c.Tick(Branches.BCS.Cycles);
+            _c.Tick(Branches.BNE.Cycles);
             Assert.Equal(prevPc + Branches.BNE.Length + 6, _c.PC);
 
             i = (byte)_c.PC;
@@ -79,15 +79,15 @@ namespace FamiMan.Core.Tests.Opcodes
             _c.P.Zero = false;
             _b.Ram[i++] = Branches.BNE.Opcode;
             _b.Ram[i++] = 0xFA; // Move PC 256-6 = 0xFA = -6
-            _c.Tick(Branches.BCS.Cycles);
+            _c.Tick(Branches.BNE.Cycles);
             Assert.Equal(prevPc + Branches.BNE.Length - 6, _c.PC);
 
             i = (byte)_c.PC;
             _c.P.Zero = true;
             _b.Ram[i++] = Branches.BNE.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
-            _c.Tick(Branches.BCS.Cycles);
-            Assert.Equal(i, _c.PC); // branch was not taken
+            _c.Tick(Branches.BNE.Cycles);
+            Assert.Equal(i + Branches.BNE.Length, _c.PC); // operands are still consumed
         }
 
         [Fact]
@@ -107,7 +107,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BMI.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BMI.Cycles);
-            Assert.Equal(i, _c.PC);
+            Assert.Equal(i + Branches.BMI.Length, _c.PC);
         }
 
         [Fact]
@@ -127,7 +127,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BPL.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BPL.Cycles);
-            Assert.Equal(i, _c.PC);
+            Assert.Equal(i + Branches.BPL.Length, _c.PC);
         }
 
         [Fact]
@@ -147,7 +147,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BVC.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BVC.Cycles);
-            Assert.Equal(i, _c.PC);
+            Assert.Equal(i + Branches.BVC.Length, _c.PC);
         }
 
         [Fact]
@@ -167,7 +167,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = Branches.BVS.Opcode;
             _b.Ram[i++] = 0x0E; // Move PC +14
             _c.Tick(Branches.BVS.Cycles);
-            Assert.Equal(i, _c.PC);
+            Assert.Equal(i + Branches.BVS.Length, _c.PC);
         }
     }
 }

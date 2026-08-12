@@ -1,6 +1,5 @@
-﻿using FamiMan.Core;
-using SDL2;
-using static SDL2.SDL;
+using FamiMan.Core;
+using FamiMan.Platform;
 
 namespace FamiMan.GUI.UI
 {
@@ -14,14 +13,14 @@ namespace FamiMan.GUI.UI
 
         public int WaitTime => _waitTime;
 
-        public void HandleKeyDown(SDL_Keycode keycode)
+        public void HandleKeyDown(Key key)
         {
-            switch (keycode)
+            switch (key)
             {
-                case SDL_Keycode.SDLK_DOWN:
+                case Key.Down:
                     _waitTime++;
                     break;
-                case SDL_Keycode.SDLK_UP:
+                case Key.Up:
                     if (_waitTime > 0)
                         _waitTime--;
                     break;
@@ -33,54 +32,58 @@ namespace FamiMan.GUI.UI
             if (_breaked || cpu.PC == _lastPC || cpu.Waiting)
                 return;
 
+            Instruction instruction = cpu.CurrentInstruction;
             byte stackPos1 = (byte)(cpu.SP + 1);
             byte stackPos2 = (byte)(cpu.SP + 2);
             ushort addr = (ushort)(bus[(ushort)(cpu.PC + 1)] + (bus[(ushort)(cpu.PC + 2)] << 8));
 
-            if (cpu.CurrentInstructionName == "RTS")
+            if (instruction == Instruction.RTS)
                 _debugText = " -> " + BitConverter.ToUInt16(new byte[2] { bus[stackPos2], bus[stackPos1] }, 0).ToString("X");
-            else if (cpu.CurrentInstructionName == "JSR" || cpu.CurrentInstructionName == "JMP")
+            else if (instruction is Instruction.JSR or Instruction.JMP)
             {
                 var opcode = Opcodes.Find(bus[cpu.PC]);
-                _debugText = opcode.OpcodeVersionName == "Indirect"
+                _debugText = opcode.AddressingMode == AddressingMode.Indirect
                     ? " (->) " + addr.ToString("X")
                     : " -> " + addr.ToString("X");
             }
-            else if (cpu.CurrentInstructionName == "BNE" || cpu.CurrentInstructionName == "BEQ")
+            else if (instruction is Instruction.BNE or Instruction.BEQ)
             {
                 addr = bus[(ushort)(cpu.PC + 1)];
                 int jumpRelative = addr > 127 ? (addr - 255) : addr;
                 int jumpTo = (int)cpu.PC + jumpRelative + 1 - 2;
-                bool branchTaken = cpu.CurrentInstructionName == "BNE" ? !cpu.P.Zero : cpu.P.Zero;
+                bool branchTaken = instruction == Instruction.BNE ? !cpu.P.Zero : cpu.P.Zero;
                 _debugText = (branchTaken ? " -> " : " !! ") + jumpTo.ToString("X");
             }
-            else if (cpu.CurrentInstructionName == "PHA")
+            else if (instruction == Instruction.PHA)
                 _debugText = " S=" + cpu.A.ToString("X") + " SP=" + (cpu.SP - 1).ToString("X");
             else
                 _debugText = string.Empty;
 
-            Console.WriteLine(cpu.PC.ToString("X") + " - " + cpu.CurrentInstructionName + _debugText);
+            Console.WriteLine(cpu.PC.ToString("X") + " - " + instruction + _debugText);
             _lastPC = cpu.PC;
-            if (cpu.CurrentInstructionName == "BRK")
+            if (instruction == Instruction.BRK)
                 _breaked = true;
         }
 
-        public void Render(IntPtr renderer, SDL_Rect messageRect, IntPtr font, SDL_Color white, Bus bus, Cpu cpu)
+        public void Render(GameWindow window, Bus bus, Cpu cpu)
         {
-            UI.WriteText(renderer, messageRect, font, white, "PC: " + cpu.PC.ToString("X") + " - " + cpu.CurrentInstructionName, 0);
-            UI.WriteText(renderer, messageRect, font, white, "A: " + cpu.A, 1);
-            UI.WriteText(renderer, messageRect, font, white, "X: " + cpu.X, 2);
-            UI.WriteText(renderer, messageRect, font, white, "Y: " + cpu.Y, 3);
-            UI.WriteText(renderer, messageRect, font, white, "SP: " + cpu.SP.ToString("X") + " " + (cpu.SP != 0xFD ? bus[cpu.SP].ToString("X") : ""), 4);
+            WriteRow(window, "PC: " + cpu.PC.ToString("X") + " - " + cpu.CurrentInstruction, 0);
+            WriteRow(window, "A: " + cpu.A, 1);
+            WriteRow(window, "X: " + cpu.X, 2);
+            WriteRow(window, "Y: " + cpu.Y, 3);
+            WriteRow(window, "SP: " + cpu.SP.ToString("X") + " " + (cpu.SP != 0xFD ? bus[cpu.SP].ToString("X") : ""), 4);
 
             var statusByte = cpu.P.AsByte();
-            UI.WriteText(renderer, messageRect, font, white, "P: " + statusByte + " (0x" + statusByte.ToString("X2") + ")", 5);
-            UI.WriteText(renderer, messageRect, font, white, BuildFlagsText(cpu.P), 6);
-            UI.WriteText(renderer, messageRect, font, white, "Ticks: " + cpu.Ticks, 7);
-            UI.WriteText(renderer, messageRect, font, white, "Waiting: " + cpu.Waiting, 8);
-            UI.WriteText(renderer, messageRect, font, white, "Last debug: " + _debugText, 9);
-            UI.WriteText(renderer, messageRect, font, white, "Wait: " + _waitTime, 10);
+            WriteRow(window, "P: " + statusByte + " (0x" + statusByte.ToString("X2") + ")", 5);
+            WriteRow(window, BuildFlagsText(cpu.P), 6);
+            WriteRow(window, "Ticks: " + cpu.Ticks, 7);
+            WriteRow(window, "Waiting: " + cpu.Waiting, 8);
+            WriteRow(window, "Last debug: " + _debugText, 9);
+            WriteRow(window, "Wait: " + _waitTime, 10);
         }
+
+        private static void WriteRow(GameWindow window, string text, int row) =>
+            window.DrawText(text, 15, 15 + 30 * row, Color.White);
 
         private static string BuildFlagsText(Cpu.StatusRegisters status)
         {
@@ -94,11 +97,11 @@ namespace FamiMan.GUI.UI
     {
         public int WaitTime => 0;
 
-        public void HandleKeyDown(SDL_Keycode keycode) { }
+        public void HandleKeyDown(Key key) { }
 
         public void UpdateInstructionDebug(Bus bus, Cpu cpu) { }
 
-        public void Render(IntPtr renderer, SDL_Rect messageRect, IntPtr font, SDL_Color white, Bus bus, Cpu cpu) { }
+        public void Render(GameWindow window, Bus bus, Cpu cpu) { }
     }
 #endif
 }

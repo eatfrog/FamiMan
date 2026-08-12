@@ -111,7 +111,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _c.X = 1;               // add 1 to the memory address
             _b.Ram[0x03E9] = 14;
 
-            _c.Tick(AND.Absolute.Cycles);
+            _c.Tick(AND.Absolute_X.Cycles);
 
             // 00000101 - 5
             // 00001110 - 14
@@ -131,7 +131,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
             _c.Y = 1;               // Add 1 to the memory address
             _b.Ram[0x03E9] = 14;
-            _c.Tick(AND.Absolute.Cycles);
+            _c.Tick(AND.Absolute_Y.Cycles);
 
             // 00000101 - 5
             // 00001110 - 14
@@ -145,7 +145,7 @@ namespace FamiMan.Core.Tests.Opcodes
         {
             _c.A = 5;
             byte i = 0;
-            _b.Ram[i++] = AND.IndirectIndexed.Opcode;   // Add Indirect_X
+            _b.Ram[i++] = AND.IndirectIndexed.Opcode;
             _b.Ram[i++] = 0xE8;                                 // Memory location: ZP 0x00E8/232d
             _b[0xE8] = 0x03;                                    // Ptr at memory location 0x00EA/232d points to 0x03
             _c.Y = 2;                                           // + 2 so 0x05
@@ -157,7 +157,7 @@ namespace FamiMan.Core.Tests.Opcodes
             // ________ AND
             // 00000100 - 4
             Assert.Equal(4, _c.A);
-            Assert.Equal(AND.IndirectIndexed.Length, _c.PC); // Program counter should have moved to correct value
+            Assert.Equal(AND.IndirectIndexed.Length, _c.PC);
         }
 
         [Fact]
@@ -165,7 +165,7 @@ namespace FamiMan.Core.Tests.Opcodes
         {
             _c.A = 5;
             byte i = 0;
-            _b.Ram[i++] = AND.IndexedIndirect.Opcode;   // Add Indirect_Y
+            _b.Ram[i++] = AND.IndexedIndirect.Opcode;
             _b.Ram[i++] = 0xE8;                                 // Memory location: ZP 0x00E8/232d
             _c.X = 2;                                           // + 2 so 0x00EA
             _b[0xEA] = 0x03;                                    // Ptr at memory location 0x00EA/234d points to 
@@ -178,7 +178,7 @@ namespace FamiMan.Core.Tests.Opcodes
             // ________ AND
             // 00000100 - 4
             Assert.Equal(4, _c.A);
-            Assert.Equal(AND.IndirectIndexed.Length, _c.PC); // Program counter should have moved to correct value
+            Assert.Equal(AND.IndexedIndirect.Length, _c.PC);
         }
     }
 }

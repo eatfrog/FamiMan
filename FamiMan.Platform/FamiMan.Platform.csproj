@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="SDL2-CS.NetCore" Version="2.0.8" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\libs\SDL2.dll" Link="SDL2.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\libs\SDL2_ttf.dll" Link="SDL2_ttf.dll" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\Sans.ttf" Link="Sans.ttf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

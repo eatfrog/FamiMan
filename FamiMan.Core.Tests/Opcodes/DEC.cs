@@ -25,9 +25,11 @@ namespace FamiMan.Core.Tests.Opcodes
 
             _b.Ram[i++] = DEC.ZeroPage.Opcode;
             _b.Ram[i++] = 0x0E; // 14            
-            _b.Ram[0x0E] = 10;
+            _b.Ram[0x0E] = 1;
             _c.Tick(DEC.ZeroPage.Cycles);
-            Assert.Equal(9, _b.Ram[0x0E]);
+            Assert.Equal(0, _b.Ram[0x0E]);
+            Assert.True(_c.P.Zero);
+            Assert.False(_c.P.Negative);
         }
 
         [Fact]

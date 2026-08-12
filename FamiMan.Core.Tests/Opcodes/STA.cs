@@ -70,7 +70,7 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
             _c.X = 1;               // add 1 to the memory address
 
-            _c.Tick(STA.Absolute.Cycles);
+            _c.Tick(STA.Absolute_X.Cycles);
 
             Assert.Equal(0x14, _b.Ram[0x03E9]);
         }
@@ -85,32 +85,32 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = 0xE8;     // Memory location: 0x03E8/1000d
             _b.Ram[i++] = 0x03;     // Little endian, The least significant byte (LSB) value, is at the lowest address.
             _c.Y = 1;               // Add 1 to the memory address
-            _c.Tick(STA.Absolute.Cycles);
+            _c.Tick(STA.Absolute_Y.Cycles);
 
             Assert.Equal(0x14, _b.Ram[0x03E9]);
         }
 
         [Fact]
-        public void STA_0x81_IndirectY()
+        public void STA_0x91_IndirectY()
         {
             _c.A = 0x14;
             byte i = 0;
-            _b.Ram[i++] = STA.IndirectIndexed.Opcode;   // Add Indirect_X
+            _b.Ram[i++] = STA.IndirectIndexed.Opcode;
             _b.Ram[i++] = 0xE8;                                 // Memory location: ZP 0x00E8/232d
             _b[0xE8] = 0x03;                                    // Ptr at memory location 0x00EA/232d points to 0x03
             _c.Y = 2;                                           // + 2 so 0x05
             _c.Tick(STA.IndirectIndexed.Cycles);        // Tick
 
             Assert.Equal(0x14, _b.Ram[0x05]);
-            Assert.Equal(STA.IndirectIndexed.Length, _c.PC); // Program counter should have moved to correct value
+            Assert.Equal(STA.IndirectIndexed.Length, _c.PC);
         }
 
         [Fact]
-        public void STA_0x91_IndirectX()
+        public void STA_0x81_IndirectX()
         {
             _c.A = 0x14;
             byte i = 0;
-            _b.Ram[i++] = STA.IndexedIndirect.Opcode;   // Add Indirect_Y
+            _b.Ram[i++] = STA.IndexedIndirect.Opcode;
             _b.Ram[i++] = 0xE8;                                 // Memory location: ZP 0x00E8/232d
             _c.X = 2;                                           // + 2 so 0x00EA
             _b[0xEA] = 0x03;                                    // Ptr at memory location 0x00EA/234d points to 
@@ -119,7 +119,7 @@ namespace FamiMan.Core.Tests.Opcodes
 
 
             Assert.Equal(0x14, _b.Ram[0x0703]);
-            Assert.Equal(STA.IndirectIndexed.Length, _c.PC); // Program counter should have moved to correct value
+            Assert.Equal(STA.IndexedIndirect.Length, _c.PC);
         }
 
     }

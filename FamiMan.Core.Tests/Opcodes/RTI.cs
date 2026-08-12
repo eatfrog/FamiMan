@@ -21,9 +21,9 @@ namespace FamiMan.Core.Tests.Opcodes
             _b.Ram[i++] = RTI.Implied.Opcode;
 
             _c.SP = 0x0D;
-            _b.Ram[0x0E] = 0x82; // status (N + Z)
-            _b.Ram[0x0F] = 0x34; // PC low
-            _b.Ram[0x10] = 0x12; // PC high
+            _b.Ram[0x010E] = 0x82; // status (N + Z)
+            _b.Ram[0x010F] = 0x34; // PC low
+            _b.Ram[0x0110] = 0x12; // PC high
 
             _c.Tick(RTI.Implied.Cycles);
 

@@ -12,14 +12,22 @@ namespace FamiMan.Core
         {
             _opcodes = typeof(Opcodes).GetNestedTypes()
                 .SelectMany(x => x.GetNestedTypes())
-                .Select(t => new Tuple<byte, Opcode>((byte)t.GetField("Opcode").GetValue(t), new Opcode 
-                    { 
+                .Select(t =>
+                {
+                    string instructionName = t.Name.Length == 3
+                        ? t.Name
+                        : t.UnderlyingSystemType.ReflectedType.Name;
+
+                    return new Tuple<byte, Opcode>((byte)t.GetField("Opcode").GetValue(t), new Opcode
+                    {
                         BackingType = t.UnderlyingSystemType,
                         MemoryMappingMode = t.GetMemoryMappingMode(),
-                        OpcodeVersionName = t.Name,
-                        OpcodeName = t.Name.Length == 3 ? t.Name : t.UnderlyingSystemType.ReflectedType.Name,
+                        AddressingMode = t.GetAddressingMode(),
+                        Instruction = Enum.Parse<Instruction>(instructionName),
+                        Length = t.GetLength(),
                         Cycles = t.GetCycles()
-                    }))
+                    });
+                })
                 .ToDictionary(x => x.Item1, x => x.Item2);
         }
 
@@ -43,14 +51,96 @@ namespace FamiMan.Core
     {
         public Type BackingType { get; set; }
 
-        public string OpcodeName { get; set; }
+        public Instruction Instruction { get; set; }
 
-        public string OpcodeVersionName { get; set; }
+        public AddressingMode AddressingMode { get; set; }
 
         public MemoryMappingMode MemoryMappingMode { get; set; }
 
+        public int Length { get; set; }
+
         public int Cycles { get; set; }
     }
+
+    public enum AddressingMode
+    {
+        Unknown,
+        Implied,
+        Accumulator,
+        Immediate,
+        ZeroPage,
+        ZeroPageX,
+        ZeroPageY,
+        Relative,
+        Absolute,
+        AbsoluteX,
+        AbsoluteY,
+        Indirect,
+        IndexedIndirect,
+        IndirectIndexed
+    }
+
+    public enum Instruction
+    {
+        ADC,
+        AND,
+        ASL,
+        BCC,
+        BCS,
+        BEQ,
+        BIT,
+        BMI,
+        BNE,
+        BPL,
+        BRK,
+        BVC,
+        BVS,
+        CLC,
+        CLD,
+        CLI,
+        CLV,
+        CMP,
+        CPX,
+        CPY,
+        DEC,
+        DEX,
+        DEY,
+        EOR,
+        INC,
+        INX,
+        INY,
+        JMP,
+        JSR,
+        KIL,
+        LDA,
+        LDX,
+        LDY,
+        LSR,
+        NOP,
+        ORA,
+        PHA,
+        PHP,
+        PLA,
+        PLP,
+        ROL,
+        ROR,
+        RTI,
+        RTS,
+        SBC,
+        SEC,
+        SED,
+        SEI,
+        STA,
+        STX,
+        STY,
+        TAX,
+        TAY,
+        TSX,
+        TXA,
+        TXS,
+        TYA
+    }
+
     public enum MemoryMappingMode
     {
         Immediate,

@@ -13,13 +13,11 @@ namespace FamiMan.Core
                 Absolute      JMP $5597     $4C  3   3
                 Indirect      JMP ($5597)   $6C  3   5
             */
-            public static Dictionary<byte, int> Lengths;
 
             public static Dictionary<byte, int> Cycles;
 
             static JMP()
             {
-                Lengths = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Length").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
                 Cycles = typeof(Opcodes).GetNestedTypes().SelectMany(x => x.GetNestedTypes()).Select(t => new Tuple<byte, int>((byte)t.GetField("Opcode").GetValue(t), (int)t.GetField("Cycles").GetValue(t))).ToDictionary(x => x.Item1, x => x.Item2);
             }
 
