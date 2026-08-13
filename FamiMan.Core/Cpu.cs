@@ -73,12 +73,12 @@ namespace FamiMan.Core
             SP = 0xFD;
 
             // $fffc-$fffd	Start of reset handler
-            PC = (ushort)(_bus[0xfffc] + (_bus[0xfffd] << 8));
+            PC = (ushort)(_bus.Read(0xfffc) + (_bus.Read(0xfffd) << 8));
         }
 
         public Instruction CurrentInstruction
         {
-            get => Opcodes.Find(_bus[PC]).Instruction;
+            get => Opcodes.Find(_bus.Read(PC)).Instruction;
         }
 
         public void Tick()
@@ -133,7 +133,7 @@ namespace FamiMan.Core
             }
 
             // Get next opcode
-            _currentOpcode = Opcodes.Find(_bus[PC]);
+            _currentOpcode = Opcodes.Find(_bus.Read(PC));
 
             if (_currentOpcode.IsBrk())
             {
@@ -152,7 +152,7 @@ namespace FamiMan.Core
 
                 if (_cyclesRemaining == 0)
                 {
-                    PC = (ushort)(_bus[0xfffe] + (_bus[0xffff] << 8));
+                    PC = (ushort)(_bus.Read(0xfffe) + (_bus.Read(0xffff) << 8));
                     _servicingInterrupt = false;
                 }
                 return;
@@ -221,7 +221,7 @@ namespace FamiMan.Core
                 case AddressingMode.IndirectIndexed:
                     // Example: LDA ($10),Y. The operand is a zero-page pointer.
                     // Follow the pointer to get the base address before adding Y.
-                    byte pointerAddress = _bus[(ushort)(PC + 1)];
+                    byte pointerAddress = _bus.Read((ushort)(PC + 1));
                     baseAddress = GetZeroPageWord(pointerAddress);
                     indexedAddress = (ushort)(baseAddress + Y);
                     break;
@@ -259,7 +259,7 @@ namespace FamiMan.Core
             ushort nextInstruction = (ushort)(PC + opcode.Length);
 
             // The operand is a signed 8-bit offset, allowing backward branches.
-            sbyte offset = unchecked((sbyte)_bus[(ushort)(PC + 1)]);
+            sbyte offset = unchecked((sbyte)_bus.Read((ushort)(PC + 1)));
             ushort targetAddress = (ushort)(nextInstruction + offset);
 
             // Taking the branch adds one cycle. Crossing a page adds one more.
@@ -314,7 +314,7 @@ namespace FamiMan.Core
                         addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
                         addr = ApplyIndex(addr, opcode.AddressingMode);
 
-                        byte val = _bus[addr];
+                        byte val = _bus.Read(addr);
 
                         PerformADC(val);
                         break;
@@ -325,7 +325,7 @@ namespace FamiMan.Core
                         addr = ApplyIndex(addr, opcode.AddressingMode);
 
                         // NOT on the value to subtract it from the accumulator
-                        PerformADC((byte)~_bus[addr]);
+                        PerformADC((byte)~_bus.Read(addr));
                         break;
                     }
                 case Instruction.CMP:
@@ -354,7 +354,7 @@ namespace FamiMan.Core
                         addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
                         addr = ApplyIndex(addr, opcode.AddressingMode);
 
-                        byte val = _bus[addr];
+                        byte val = _bus.Read(addr);
                         byte result = 0;
                         if (opcode.Instruction is Instruction.AND or Instruction.BIT)
                             result = (byte)(A & val);
@@ -391,7 +391,7 @@ namespace FamiMan.Core
                         addr = ApplyIndex(addr, opcode.AddressingMode);
 
                         bool useAccumulator = opcode.AddressingMode == AddressingMode.Accumulator;
-                        byte value = useAccumulator ? A : _bus[addr];
+                        byte value = useAccumulator ? A : _bus.Read(addr);
 
                         bool carryIn = P.Carry;
                         var lsb = (value & ~(value - 1));
@@ -426,7 +426,7 @@ namespace FamiMan.Core
                         if (useAccumulator)
                             A = result;
                         else
-                            _bus[addr] = result;
+                            _bus.Write(addr, result);
 
                         SetZeroFlag(result);
                         SetNegativeFlag(result);
@@ -457,7 +457,7 @@ namespace FamiMan.Core
 
                         if (branchTaken)
                         {
-                            sbyte offset = unchecked((sbyte)_bus[addr]);
+                            sbyte offset = unchecked((sbyte)_bus.Read(addr));
                             PC = (ushort)(PC + opcode.Length + offset);
                             advanceProgramCounter = false;
                         }
@@ -473,19 +473,19 @@ namespace FamiMan.Core
 
                     if (opcode.Instruction == Instruction.LDA)
                     {
-                        A = _bus[addr];
+                        A = _bus.Read(addr);
                         SetZeroFlag(A);
                         SetNegativeFlag(A);
                     }
                     else if (opcode.Instruction == Instruction.LDX)
                     {
-                        X = _bus[addr];
+                        X = _bus.Read(addr);
                         SetZeroFlag(X);
                         SetNegativeFlag(X);
                     }
                     else if (opcode.Instruction == Instruction.LDY)
                     {
-                        Y = _bus[addr];
+                        Y = _bus.Read(addr);
                         SetZeroFlag(Y);
                         SetNegativeFlag(Y);
                     }
@@ -495,7 +495,7 @@ namespace FamiMan.Core
                     addr = ApplyIndex(addr, opcode.AddressingMode);
                     if (addr == SP) throw new InvalidOperationException("Attempting to write over stack pointer");
 
-                    _bus[addr] = A;
+                    _bus.Write(addr, A);
                     break;
                 case Instruction.STX:
                 case Instruction.STY:
@@ -505,9 +505,9 @@ namespace FamiMan.Core
                     if (addr == SP) throw new InvalidOperationException("Attempting to write over stack pointer");
 
                     if (opcode.Instruction == Instruction.STX)
-                        _bus[addr] = X;
+                        _bus.Write(addr, X);
                     else
-                        _bus[addr] = Y;
+                        _bus.Write(addr, Y);
                     break;
                 case Instruction.TAX:
                     X = A;
@@ -576,9 +576,10 @@ namespace FamiMan.Core
                     var op = 1;
                     if (opcode.Instruction == Instruction.DEC)
                         op = -1;
-                    _bus[addr] = (byte)(_bus[addr] + op);
-                    SetZeroFlag(_bus[addr]);
-                    SetNegativeFlag(_bus[addr]);
+                    byte updatedValue = (byte)(_bus.Read(addr) + op);
+                    _bus.Write(addr, updatedValue);
+                    SetZeroFlag(updatedValue);
+                    SetNegativeFlag(updatedValue);
                     break;
                 case Instruction.TXS:
                     SP = X;
@@ -611,7 +612,7 @@ namespace FamiMan.Core
                         {                           
                             ushort hi = (ushort) ((addr & 0xFF) == 0xFF ? addr - 0xFF : addr + 1);
                             uint oldPC = PC;
-                            PC = (ushort)(_bus[addr] | (ushort)(_bus[hi] << 8));
+                            PC = (ushort)(_bus.Read(addr) | (ushort)(_bus.Read(hi) << 8));
 
                             if ((oldPC & 0xFF00) != (PC & 0xFF00)) _cyclesRemaining += 2;
                         }
@@ -658,7 +659,7 @@ namespace FamiMan.Core
 
         private void Compare(ushort addr, byte regValue)
         {
-            byte val = _bus[addr];
+            byte val = _bus.Read(addr);
             SetNegativeFlag((byte)(regValue - val));
             P.Carry = regValue >= val;
             P.Zero = regValue == val;
@@ -695,14 +696,14 @@ namespace FamiMan.Core
         {
             // Stack is located in page 1 ($0100-$01FF)
             // 0x0100 is the fixed starting address of the 6502’s hardware stack page so we add that to the pointer value
-            _bus[(ushort)(0x0100 | SP)] = value;
+            _bus.Write((ushort)(0x0100 | SP), value);
             SP--;
         }
 
         private byte PopByte()
         {
             SP++;
-            return _bus[(ushort)(0x0100 | SP)];
+            return _bus.Read((ushort)(0x0100 | SP));
         }
 
         private void PerformADC(byte val)
@@ -737,16 +738,16 @@ namespace FamiMan.Core
                 case MemoryMappingMode.Immediate:
                     break;
                 case MemoryMappingMode.ZeroPage:
-                    addr = _bus[addr];
+                    addr = _bus.Read(addr);
                     break;
                 case MemoryMappingMode.Absolute:
                     addr = GetWord(addr);
                     break;
                 case MemoryMappingMode.IndexedIndirect:
-                    addr = GetZeroPageWord((byte)(_bus[addr] + X));
+                    addr = GetZeroPageWord((byte)(_bus.Read(addr) + X));
                     break;
                 case MemoryMappingMode.IndirectIndexed:
-                    addr = (ushort)(GetZeroPageWord(_bus[addr]) + Y);
+                    addr = (ushort)(GetZeroPageWord(_bus.Read(addr)) + Y);
                     break;
                 default:
                     break;
@@ -755,10 +756,10 @@ namespace FamiMan.Core
             return addr;
         }
 
-        private ushort GetWord(ushort addr) => (ushort)(_bus[addr] + (_bus[(ushort)(addr + 1)] << 8));
+        private ushort GetWord(ushort addr) => (ushort)(_bus.Read(addr) + (_bus.Read((ushort)(addr + 1)) << 8));
 
         private ushort GetZeroPageWord(byte addr) =>
-            (ushort)(_bus[addr] | (_bus[(byte)(addr + 1)] << 8));
+            (ushort)(_bus.Read(addr) | (_bus.Read((byte)(addr + 1)) << 8));
 
         public class StatusRegisters
         {

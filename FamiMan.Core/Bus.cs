@@ -44,6 +44,26 @@ namespace FamiMan.Core
 
         public IMapper Mapper { get; }
 
+        /// <summary>
+        /// Reads one byte from the CPU address space. Device-specific read side
+        /// effects can now be implemented here instead of being hidden behind a ref.
+        /// </summary>
+        public byte Read(ushort address)
+        {
+            return this[address];
+        }
+
+        /// <summary>
+        /// Writes one byte to the CPU address space. Device-specific write side
+        /// effects can now be implemented here instead of being hidden behind a ref.
+        /// </summary>
+        public void Write(ushort address, byte value)
+        {
+            this[address] = value;
+        }
+
+        // Kept temporarily for test setup and code that has not yet moved to the
+        // explicit CPU-bus API. The CPU itself no longer uses this ref indexer.
         public ref byte this[ushort index]
         {
             get => ref Mapper.GetByteAtAddress(index);

@@ -60,7 +60,7 @@ namespace FamiMan.Core.Tests
             Assert.Equal(0, bus.Ppu.Cycle);
         }
 
-        [Fact(Skip = "Work through the smaller background lookup tests first.")]
+        [Fact]
         public void BackgroundPixelCombinesBothChrBitplanes()
         {
             var bus = CreateBusWithChr();
@@ -75,7 +75,7 @@ namespace FamiMan.Core.Tests
             Assert.Equal(0x2A, bus.Ppu.GetBackgroundPixel(0, 0));
         }
 
-        [Fact(Skip = "Work through the smaller background lookup tests first.")]
+        [Fact]
         public void BackgroundPixelUsesAttributeTableToSelectPalette()
         {
             var bus = CreateBusWithChr();
@@ -105,8 +105,11 @@ namespace FamiMan.Core.Tests
         }
 
         [Theory]
+        // PPUCTRL bit 4 is clear, so tile 1 starts at $0000 + (1 * 16) = $0010.
         [InlineData(0x00, 0x01, 0x0010)]
+        // PPUCTRL bit 4 is set, moving the same tile 1 to $1000 + (1 * 16) = $1010.
         [InlineData(0x10, 0x01, 0x1010)]
+        // The $1000 table is still selected, but tile 2 starts one 16-byte tile later.
         [InlineData(0x10, 0x02, 0x1020)]
         public void TileAddressUsesSixteenBytesPerTile(
             byte ppuCtrl,
@@ -165,7 +168,7 @@ namespace FamiMan.Core.Tests
 
             // $23C0 is the first attribute byte. Its lowest two bits select
             // the palette used by the top-left 2x2-tile quadrant.
-            bus.Ppu.WritePpuMemory(0x23C0, 0b0000_0010);
+            bus.Ppu.WritePpuMemory(Ppu.NAMETABLE_ATTR_START, 0b0000_0010);
 
             Assert.Equal(2, bus.Ppu.GetBackgroundPaletteNumber(0, 0));
         }
@@ -182,7 +185,7 @@ namespace FamiMan.Core.Tests
             Assert.Equal(0x30, bus.Ppu.GetBackgroundPaletteValue(2, 1));
         }
 
-        [Fact(Skip = "Work through the smaller background lookup tests first.")]
+        [Fact]
         public void PpuCtrlSelectsBackgroundPatternTableAt1000()
         {
             var bus = CreateBusWithChr();

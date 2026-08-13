@@ -30,7 +30,7 @@ namespace FamiMan.Core
         {
             foreach (byte b in program)
             {
-                _b[startLoc] = b;
+                _b.Write(startLoc, b);
                 startLoc++;
             }
         }

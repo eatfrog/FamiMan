@@ -23,7 +23,9 @@ namespace FamiMan.Core
         private const ushort PPUDATA    = 0x2007;
 
         public const ushort NAMETABLE_START = 0x2000;
+        public const ushort NAMETABLE_ATTR_START = 0x23C0;
 
+        public const ushort PALETTE_START = 0x3F00;
         public Ppu(Bus b)
         {
             _b = b;
@@ -104,6 +106,8 @@ namespace FamiMan.Core
             /*
              *  $0000–$1FFF  CHR-ROM or CHR-RAM
                 $2000–$3EFF  nametable memory and mirrors
+                    $2000–$23BF  tile numbers
+                    $23C0–$23FF  attribute bytes
                 $3F00–$3FFF  palette memory and mirrors
             */
             address &= 0x3FFF;
@@ -262,7 +266,12 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetBackgroundPixel(int x, int y)
         {
-            throw new NotImplementedException();
+            var tilenumber = GetNametableTileNumber(x, y);
+            int tileX = x % 8;
+            int tileY = y % 8;
+            var idx = GetTilePixelColorIndex(tilenumber, tileX, tileY);
+            var palette = GetBackgroundPaletteNumber(x, y);
+            return GetBackgroundPaletteValue(palette, idx);
         }
 
         /// <summary>
@@ -280,7 +289,8 @@ namespace FamiMan.Core
         /// </summary>
         public ushort GetBackgroundTileAddress(byte tileNumber)
         {
-            throw new NotImplementedException();
+            // a tile is 8x8px, and each pixel is 2 bits, so each tile takes 16 bytes in the CHR pattern table.
+            return (ushort)(GetBackgroundPatternTableBase() + (tileNumber * 16));
         }
 
         /// <summary>
@@ -288,7 +298,12 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetNametableTileNumber(int x, int y)
         {
-            throw new NotImplementedException();
+            // Each tile is 8x8px
+            int tileColumn = x / 8;
+            int tileRow = y / 8;
+
+            // nametable is a grid containing 32 tile numbers per row
+            return _nametableRam[(tileRow * 32) + tileColumn];
         }
 
         /// <summary>
@@ -297,7 +312,29 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetTilePixelColorIndex(byte tileNumber, int x, int y)
         {
-            throw new NotImplementedException();
+            if (x < 0 || x >= 8 || y < 0 || y >= 8)
+            {
+                throw new InvalidOperationException("Tile pixel coordinates must be within 8x8 tile");
+            }
+
+            // each index is two bits, 00 to 11, so we need to read two bytes from the CHR pattern table for this tile.
+            // each tile occupies 16 bytes, a low and high bitplane, so the low plane is at the tile's base address and the high plane is 8 bytes later.
+            // its one byte per pixel row
+            ushort tilestart = GetBackgroundTileAddress(tileNumber);
+
+            // one byte is an entire row of the tile since they are 8x8px
+            // add y to get the row we want, and add 8 to get the high bitplane row
+            byte lowPlaneRow = ReadPpuMemory((ushort)(tilestart + y));
+            byte highPlaneRow = ReadPpuMemory((ushort)(tilestart + 8 + y));
+
+            // the leftmost pixel is bit 7, so we need to shift the row right by (7 - x) to get the bit for this pixel
+            int bitPosition = 7 - x;
+            int lowBit = (lowPlaneRow >> bitPosition) & 1;
+            int highBit = (highPlaneRow >> bitPosition) & 1;
+
+            // combine the two bits into a color index from 0 to 3
+            int colorIndex = lowBit | (highBit << 1);
+            return (byte)(colorIndex);
         }
 
         /// <summary>
@@ -305,15 +342,24 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetBackgroundPaletteNumber(int x, int y)
         {
-            throw new NotImplementedException();
+            // each background tile is 32x32px
+            // each row of tiles in attr table is 8 tiles
+            int attributeColumn = x / 32;
+            int attributeRow = y / 32;
+
+            ushort attributeAddress =
+                (ushort)(0x23C0 + attributeRow * 8 + attributeColumn);
+
+            return ReadPpuMemory(attributeAddress);
         }
 
         /// <summary>
         /// Resolves a background palette number and color index to an NES palette value.
+        /// There are 4 palettes and 4 indices in a palette
         /// </summary>
         public byte GetBackgroundPaletteValue(byte paletteNumber, byte colorIndex)
         {
-            throw new NotImplementedException();
+            return ReadPpuMemory((ushort)(PALETTE_START + (paletteNumber * 4) + colorIndex));
         }
 
         public void Tick()

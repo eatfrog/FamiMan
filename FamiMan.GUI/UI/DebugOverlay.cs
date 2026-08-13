@@ -6,6 +6,8 @@ namespace FamiMan.GUI.UI
 #if DEBUG
     internal sealed class DebugOverlay
     {
+        public const int SidebarWidth = 400;
+
         private int _waitTime;
         private bool _breaked;
         private ushort _lastPC;
@@ -35,20 +37,20 @@ namespace FamiMan.GUI.UI
             Instruction instruction = cpu.CurrentInstruction;
             byte stackPos1 = (byte)(cpu.SP + 1);
             byte stackPos2 = (byte)(cpu.SP + 2);
-            ushort addr = (ushort)(bus[(ushort)(cpu.PC + 1)] + (bus[(ushort)(cpu.PC + 2)] << 8));
+            ushort addr = (ushort)(bus.Read((ushort)(cpu.PC + 1)) + (bus.Read((ushort)(cpu.PC + 2)) << 8));
 
             if (instruction == Instruction.RTS)
-                _debugText = " -> " + BitConverter.ToUInt16(new byte[2] { bus[stackPos2], bus[stackPos1] }, 0).ToString("X");
+                _debugText = " -> " + BitConverter.ToUInt16(new byte[2] { bus.Read(stackPos2), bus.Read(stackPos1) }, 0).ToString("X");
             else if (instruction is Instruction.JSR or Instruction.JMP)
             {
-                var opcode = Opcodes.Find(bus[cpu.PC]);
+                var opcode = Opcodes.Find(bus.Read(cpu.PC));
                 _debugText = opcode.AddressingMode == AddressingMode.Indirect
                     ? " (->) " + addr.ToString("X")
                     : " -> " + addr.ToString("X");
             }
             else if (instruction is Instruction.BNE or Instruction.BEQ)
             {
-                addr = bus[(ushort)(cpu.PC + 1)];
+                addr = bus.Read((ushort)(cpu.PC + 1));
                 int jumpRelative = addr > 127 ? (addr - 255) : addr;
                 int jumpTo = (int)cpu.PC + jumpRelative + 1 - 2;
                 bool branchTaken = instruction == Instruction.BNE ? !cpu.P.Zero : cpu.P.Zero;
@@ -71,7 +73,7 @@ namespace FamiMan.GUI.UI
             WriteRow(window, "A: " + cpu.A, 1);
             WriteRow(window, "X: " + cpu.X, 2);
             WriteRow(window, "Y: " + cpu.Y, 3);
-            WriteRow(window, "SP: " + cpu.SP.ToString("X") + " " + (cpu.SP != 0xFD ? bus[cpu.SP].ToString("X") : ""), 4);
+            WriteRow(window, "SP: " + cpu.SP.ToString("X") + " " + (cpu.SP != 0xFD ? bus.Read(cpu.SP).ToString("X") : ""), 4);
 
             var statusByte = cpu.P.AsByte();
             WriteRow(window, "P: " + statusByte + " (0x" + statusByte.ToString("X2") + ")", 5);
@@ -95,6 +97,8 @@ namespace FamiMan.GUI.UI
 #else
     internal sealed class DebugOverlay
     {
+        public const int SidebarWidth = 0;
+
         public int WaitTime => 0;
 
         public void HandleKeyDown(Key key) { }

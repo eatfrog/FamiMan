@@ -107,16 +107,19 @@ public sealed unsafe class GameWindow : IDisposable
     }
 
     /// <summary>
-    /// Draws a complete ARGB8888 framebuffer. The image is centered and scaled by
-    /// a whole-number factor so emulator pixels remain sharp.
+    /// Draws a complete ARGB8888 framebuffer. The image is centered in the area
+    /// to the right of <paramref name="leftInset"/> and scaled by a whole-number
+    /// factor so emulator pixels remain sharp.
     /// </summary>
-    public void DrawFrame(ReadOnlySpan<uint> pixels, int width, int height)
+    public void DrawFrame(ReadOnlySpan<uint> pixels, int width, int height, int leftInset = 0)
     {
         ThrowIfDisposed();
         if (width <= 0 || height <= 0)
             throw new ArgumentOutOfRangeException(nameof(width), "Frame dimensions must be positive.");
         if (pixels.Length != checked(width * height))
             throw new ArgumentException("The pixel count does not match the frame dimensions.", nameof(pixels));
+        if (leftInset < 0)
+            throw new ArgumentOutOfRangeException(nameof(leftInset), "The left inset cannot be negative.");
 
         EnsureFrameTexture(width, height);
 
@@ -128,12 +131,16 @@ public sealed unsafe class GameWindow : IDisposable
         }
 
         EnsureSuccess(SDL_GetRendererOutputSize(_renderer, out int outputWidth, out int outputHeight), "Could not read the window size");
-        int scale = Math.Max(1, Math.Min(outputWidth / width, outputHeight / height));
-        int renderedWidth = Math.Min(outputWidth, checked(width * scale));
+        int gameplayWidth = Math.Max(0, outputWidth - leftInset);
+        if (gameplayWidth == 0)
+            return;
+
+        int scale = Math.Max(1, Math.Min(gameplayWidth / width, outputHeight / height));
+        int renderedWidth = Math.Min(gameplayWidth, checked(width * scale));
         int renderedHeight = Math.Min(outputHeight, checked(height * scale));
         var destination = new SDL_Rect
         {
-            x = (outputWidth - renderedWidth) / 2,
+            x = leftInset + (gameplayWidth - renderedWidth) / 2,
             y = (outputHeight - renderedHeight) / 2,
             w = renderedWidth,
             h = renderedHeight
