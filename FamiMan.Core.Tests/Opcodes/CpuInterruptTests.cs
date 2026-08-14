@@ -4,11 +4,11 @@ using static FamiMan.Core.Opcodes;
 namespace FamiMan.Core.Tests.Opcodes
 {
     /// <summary>
-    /// Regression tests for the CPU interrupt behavior that is still missing.
+    /// Focused tests for CPU interrupt behavior.
     /// BRK, NMI, and IRQ all enter an interrupt handler, but BRK differs in the
     /// return address and in the copy of the status byte pushed to the stack.
     /// </summary>
-    public class InterruptRegressionTests
+    public class CpuInterruptTests
     {
         [Fact]
         public void BRKUsesSevenCycles()
@@ -25,8 +25,8 @@ namespace FamiMan.Core.Tests.Opcodes
             cpu.SP = 0xFD;
             cpu.P.Carry = true;
             bus[0x0200] = BRK.BRK_00.Opcode;
-            bus[0xFFFE] = 0x00;
-            bus[0xFFFF] = 0x90;
+            bus.SetPrgRomByte(0xFFFE, 0x00);
+            bus.SetPrgRomByte(0xFFFF, 0x90);
 
             cpu.Tick(7);
 
@@ -46,10 +46,10 @@ namespace FamiMan.Core.Tests.Opcodes
             cpu.PC = 0x0200;
             cpu.SP = 0xFD;
             bus[0x0200] = BRK.BRK_00.Opcode;
-            bus[0xFFFE] = 0x00;
-            bus[0xFFFF] = 0x90;
-            bus[0x9000] = LDA.Immediate.Opcode;
-            bus[0x9001] = 0x42;
+            bus.SetPrgRomByte(0xFFFE, 0x00);
+            bus.SetPrgRomByte(0xFFFF, 0x90);
+            bus.SetPrgRomByte(0x9000, LDA.Immediate.Opcode);
+            bus.SetPrgRomByte(0x9001, 0x42);
 
             cpu.Tick(7);
 
@@ -70,8 +70,8 @@ namespace FamiMan.Core.Tests.Opcodes
             cpu.PC = 0x0200;
             cpu.SP = 0xFD;
             bus[0x0200] = BRK.BRK_00.Opcode;
-            bus[0xFFFE] = 0x00;
-            bus[0xFFFF] = 0x90;
+            bus.SetPrgRomByte(0xFFFE, 0x00);
+            bus.SetPrgRomByte(0xFFFF, 0x90);
 
             cpu.Tick(7);
 
@@ -88,9 +88,9 @@ namespace FamiMan.Core.Tests.Opcodes
             cpu.SP = 0xFD;
             bus[0x0200] = BRK.BRK_00.Opcode;
             bus[0x0202] = BRK.BRK_00.Opcode;
-            bus[0xFFFE] = 0x00;
-            bus[0xFFFF] = 0x90;
-            bus[0x9000] = RTI.Implied.Opcode;
+            bus.SetPrgRomByte(0xFFFE, 0x00);
+            bus.SetPrgRomByte(0xFFFF, 0x90);
+            bus.SetPrgRomByte(0x9000, RTI.Implied.Opcode);
 
             cpu.Tick(7 + RTI.Implied.Cycles + 7);
 
@@ -110,8 +110,8 @@ namespace FamiMan.Core.Tests.Opcodes
             cpu.P.Carry = true;
             cpu.P.InterruptsDisabled = true; // NMI cannot be masked by the I flag.
             bus[0x0200] = NOP.NOP_EA.Opcode;
-            bus[0xFFFA] = 0x00;
-            bus[0xFFFB] = 0x90;
+            bus.SetPrgRomByte(0xFFFA, 0x00);
+            bus.SetPrgRomByte(0xFFFB, 0x90);
 
             cpu.RequestInterrupt(InterruptType.NMI);
             cpu.Tick(7);
@@ -133,8 +133,8 @@ namespace FamiMan.Core.Tests.Opcodes
             cpu.P.Carry = true;
             cpu.P.InterruptsDisabled = false;
             bus[0x0200] = NOP.NOP_EA.Opcode;
-            bus[0xFFFE] = 0x34;
-            bus[0xFFFF] = 0x12;
+            bus.SetPrgRomByte(0xFFFE, 0x34);
+            bus.SetPrgRomByte(0xFFFF, 0x12);
 
             cpu.RequestInterrupt(InterruptType.IRQ);
             cpu.Tick(7);
@@ -157,8 +157,8 @@ namespace FamiMan.Core.Tests.Opcodes
             cpu.P.InterruptsDisabled = true;
             bus[0x0200] = LDA.Immediate.Opcode;
             bus[0x0201] = 0x42;
-            bus[0xFFFE] = 0x34;
-            bus[0xFFFF] = 0x12;
+            bus.SetPrgRomByte(0xFFFE, 0x34);
+            bus.SetPrgRomByte(0xFFFF, 0x12);
 
             cpu.RequestInterrupt(InterruptType.IRQ);
             cpu.Tick(LDA.Immediate.Cycles);
@@ -178,8 +178,8 @@ namespace FamiMan.Core.Tests.Opcodes
             bus[0x0200] = LDA.Immediate.Opcode;
             bus[0x0201] = 0x42;
             bus[0x0202] = NOP.NOP_EA.Opcode;
-            bus[0xFFFA] = 0x00;
-            bus[0xFFFB] = 0x90;
+            bus.SetPrgRomByte(0xFFFA, 0x00);
+            bus.SetPrgRomByte(0xFFFB, 0x90);
 
             cpu.Tick();
             cpu.RequestInterrupt(InterruptType.NMI);
@@ -208,11 +208,11 @@ namespace FamiMan.Core.Tests.Opcodes
             bus[0x0200] = JMP.Absolute.Opcode;
             bus[0x0201] = 0x00;
             bus[0x0202] = 0x02;
-            bus[0xFFFA] = 0x00;
-            bus[0xFFFB] = 0x90;
-            bus[0xFFFE] = 0x00;
-            bus[0xFFFF] = 0xA0;
-            bus[0x9000] = RTI.Implied.Opcode;
+            bus.SetPrgRomByte(0xFFFA, 0x00);
+            bus.SetPrgRomByte(0xFFFB, 0x90);
+            bus.SetPrgRomByte(0xFFFE, 0x00);
+            bus.SetPrgRomByte(0xFFFF, 0xA0);
+            bus.SetPrgRomByte(0x9000, RTI.Implied.Opcode);
 
             cpu.RequestInterrupt(InterruptType.IRQ);
             cpu.RequestInterrupt(InterruptType.NMI);
@@ -237,5 +237,6 @@ namespace FamiMan.Core.Tests.Opcodes
             bus.IO.CHRROM = new byte[8_192];
             return bus;
         }
+
     }
 }

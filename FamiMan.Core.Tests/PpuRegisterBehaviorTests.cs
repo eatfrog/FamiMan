@@ -6,7 +6,7 @@ namespace FamiMan.Core.Tests
     /// CPU-visible PPU register behavior needed for a game to upload its
     /// pattern, nametable, and palette data before the first rendered frame.
     /// </summary>
-    public class PpuRegisterRegressionTests
+    public class PpuRegisterBehaviorTests
     {
         [Fact]
         public void PpuCtrlAndPpuMaskWritesStoreTheirValues()
@@ -118,6 +118,20 @@ namespace FamiMan.Core.Tests
             bus.Ppu.WriteCpuRegister(0x2006, 0x00);
 
             Assert.Equal(0x0F, bus.Ppu.ReadCpuRegister(0x2007));
+        }
+
+        [Fact]
+        public void PpuScrollStoresHorizontalThenVerticalScrollWrites()
+        {
+            var bus = CreateBusWithChr();
+
+            // Like PPUADDR, PPUSCROLL uses two writes. The first is horizontal
+            // scroll and the second is vertical scroll.
+            bus.Ppu.WriteCpuRegister(0x2005, 0x12);
+            bus.Ppu.WriteCpuRegister(0x2005, 0x34);
+
+            Assert.Equal(0x12, bus.Ppu.ScrollX);
+            Assert.Equal(0x34, bus.Ppu.ScrollY);
         }
 
         private static Bus CreateBusWithChr()

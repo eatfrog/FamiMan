@@ -9,7 +9,7 @@ namespace FamiMan.Core.Tests
     /// Focused regressions for the cartridge-loader and CPU-bus work that
     /// follows the completed CPU instruction milestone.
     /// </summary>
-    public class CartridgeAndBusRegressionTests
+    public class CartridgeLoadingAndCpuBusMappingTests
     {
         [Fact]
         public void INesLoaderRequiresEntireMagicHeaderIncluding1A()

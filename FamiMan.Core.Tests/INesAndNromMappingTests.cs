@@ -4,7 +4,7 @@ using Xunit;
 
 namespace FamiMan.Core.Tests
 {
-    public class NestestRomRegressionTests
+    public class INesAndNromMappingTests
     {
         [Fact]
         public void INesLoaderStartsPrgRomAfterEntireHeader()

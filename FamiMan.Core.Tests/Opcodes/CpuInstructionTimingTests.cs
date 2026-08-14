@@ -3,7 +3,7 @@ using static FamiMan.Core.Opcodes;
 
 namespace FamiMan.Core.Tests.Opcodes
 {
-    public class TimingRegressionTests
+    public class CpuInstructionTimingTests
     {
         [Fact]
         public void OfficialNopTakesTwoCycles()

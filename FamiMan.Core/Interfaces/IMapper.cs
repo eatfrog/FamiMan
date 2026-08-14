@@ -2,10 +2,16 @@
 {
     public interface IMapper
     {
-        public ref byte GetByteAtAddress(ushort address);
+        byte ReadCpu(ushort address);
+        void WriteCpu(ushort address, byte value);
 
-        public ref byte[] GetBytesAtAddress(ushort[] address);
+        byte ReadPpu(ushort address);
+        void WritePpu(ushort address, byte value);
 
-        ref byte GetPPUByteAtAddress(ushort index);
+        public byte GetByteAtAddress(ushort address);
+
+        public byte[] GetBytesAtAddress(ushort[] address);
+
+        byte GetPPUByteAtAddress(ushort index);
     }
 }

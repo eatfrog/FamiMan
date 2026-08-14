@@ -33,7 +33,7 @@ namespace FamiMan.Core.Mappers
         }
 
         // Maybe we should have separate Read and Write methods instead to limit access to read only addresses
-        public ref byte GetByteAtAddress(ushort index)
+        public byte GetByteAtAddress(ushort index)
         {
             // Ram = $0000 -$07FF
             // 8 blocks, 256 values each ex XX00 -> XXFF
@@ -42,42 +42,42 @@ namespace FamiMan.Core.Mappers
             // 0200 to 07ff is actual ram
             // 08xx, 10xx, 18xx are mirrors
             if (index >= 0 && index <= 0x07FF)
-                return ref Ram.AsSpan()[index];
+                return Ram.AsSpan()[index];
             else if (index >= 0x800 && index <= 0xFFF)
-                return ref Ram.AsSpan()[index - 0x800];
+                return Ram.AsSpan()[index - 0x800];
             else if (index >= 0x1000 && index <= 0x17FF)
-                return ref Ram.AsSpan()[index - 0x1000];
+                return Ram.AsSpan()[index - 0x1000];
             else if (index >= 0x1800 && index <= 0x1FFF)
-                return ref Ram.AsSpan()[index - 0x1800];
+                return Ram.AsSpan()[index - 0x1800];
             else if (index >= 0x2000 && index <= 0x3FFF)
             {
                 ushort registerAddress =
                     (ushort)(0x2000 + ((index - 0x2000) % 8));
 
-                return ref GetPPUByteAtAddress(registerAddress);
+                return GetPPUByteAtAddress(registerAddress);
             }
             else if (index == 0x4014)
-                return ref PPU.Register.Registers[8];
+                return PPU.Register.Registers[8];
             else if (index >= 0x4000 && index <= 0x4013)
-                return ref APU.Registers[index];
+                return APU.Registers[index];
             else if (index >= 0x6000 && index <= 0x7FFF)
-                return ref _sram.AsSpan()[index - 0x6000];
+                return _sram.AsSpan()[index - 0x6000];
             else if (index >= 0x8000 && index <= 0xFFFF)
             {
                 if (IO.PRGROM.Length < index)
                 {
                     int timesMirrored = index / IO.PRGROM.Length;
                     int realIndex = index - (IO.PRGROM.Length * timesMirrored);
-                    return ref IO.PRGROM[realIndex];
+                    return IO.PRGROM[realIndex];
                 }
 
                 int prgIndex = (index - 0x8000) % IO.PRGROM.Length;
-                return ref IO.PRGROM[prgIndex];
+                return IO.PRGROM[prgIndex];
             }
             else
             {
                 Console.WriteLine("Access to not implemented memory area: " + index.ToString("X"));
-                return ref Ram.AsSpan()[0];
+                return Ram.AsSpan()[0];
                 //throw new NotImplementedException("Not done");
             }
 
@@ -93,22 +93,58 @@ namespace FamiMan.Core.Mappers
             */
         }
 
-        public ref byte[] GetBytesAtAddress(ushort[] address)
+        public byte[] GetBytesAtAddress(ushort[] address)
         {
             throw new System.NotImplementedException();
         }
 
-        public ref byte GetPPUByteAtAddress(ushort index)
+        public byte GetPPUByteAtAddress(ushort index)
         {
 
             if (index < 0x2000) // CHR-ROM
-                return ref _b.IO.CHRROM[index];
+                return 0; // ref _b.IO.CHRROM[index];
             else if (index >= 0x2000 && index < 0x2008)
-                return ref PPU.Register.Registers[index - 0x2000];
+                return PPU.ReadCpuRegister(index); //ref PPU.Register.Registers[index - 0x2000];
             else if (index == 0x4014) // OAMDMA
-                return ref PPU.Register.Registers[8];
+                return 0; // ref PPU.Register.Registers[8];
 
             else throw new InvalidOperationException("Memory access violation");
+        }
+
+        public byte ReadCpu(ushort address)
+        {
+            // actual ram
+            if (address is >= 0x6000 and <= 0x7FFF)
+                return _sram[(ushort)(address - 0x6000)];
+
+            // cartridge data, PRG-ROM
+            if (address >= 0x8000)
+            {
+                int prgIndex =
+                    (address - 0x8000) % IO.PRGROM.Length;
+
+                return IO.PRGROM[prgIndex];
+            }
+
+            throw new InvalidOperationException(
+                $"Mapper cannot read CPU address ${address:X4}");
+        }
+
+        public void WriteCpu(ushort address, byte value)
+        {
+            // Actual ram, save ram/work ram
+            if (address is >= 0x6000 and <= 0x7FFF)
+                _sram[(ushort)(address - 0x6000)] = value;
+        }
+
+        public byte ReadPpu(ushort address)
+        {
+            return PPU.ReadPpuMemory(address);
+        }
+
+        public void WritePpu(ushort address, byte value)
+        {
+            PPU.WritePpuMemory(address, value);
         }
     }
 }

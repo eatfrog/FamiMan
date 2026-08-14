@@ -16,11 +16,12 @@ namespace FamiMan.Core
         private readonly byte[] _nametableRam = new byte[0x800];
         private readonly byte[] _paletteRam = new byte[0x20];
 
-        public const ushort PPUCTRL     = 0x2000;
-        private const ushort PPUMASK    = 0x2001;
-        private const ushort PPUSTATUS  = 0x2002;
-        private const ushort PPUADDR    = 0x2006;
-        private const ushort PPUDATA    = 0x2007;
+        public const ushort PPUCTRL_ADDR   = 0x2000;
+        public const ushort PPUMASK_ADDR   = 0x2001;
+        public const ushort PPUSTATUS_ADDR = 0x2002;
+        public const ushort PPUSCROLL_ADDR = 0x2005;
+        public const ushort PPUADDR_ADDR   = 0x2006;
+        public const ushort PPUDATA_ADDR   = 0x2007;
 
         public const ushort NAMETABLE_START = 0x2000;
         public const ushort NAMETABLE_ATTR_START = 0x23C0;
@@ -30,7 +31,7 @@ namespace FamiMan.Core
         {
             _b = b;
             _r = new Ram(16 * 1024);
-            Register = new PPURegister
+            Register = new PPURegister(this)
             {
                 // Vblank always on
                 PPUSTATUS = 0b10000000 //128
@@ -64,6 +65,8 @@ namespace FamiMan.Core
         public int Cycle { get; private set; }
         public int Scanline { get; private set; }
         public bool FrameComplete { get; private set; }
+        public byte ScrollX { get; private set; }
+        public byte ScrollY { get; private set; }
 
         /// <summary>
         /// Reads the PPU's separate $0000-$3FFF address space.
@@ -163,24 +166,24 @@ namespace FamiMan.Core
 
         private byte _ppuDataReadBuffer;
 
-        public byte ReadCpuRegister(ushort index)
+        public byte ReadCpuRegister(ushort address)
         {
-            if (index == PPUSTATUS) 
+            if (address == PPUSTATUS_ADDR) 
             {
-                _expectingAddressHighByte = true;
-                byte result = Register.PPUSTATUS;
-                Register.PPUSTATUS &= 0x7F;
+                _expectingFirstWrite = true;
+                byte result = Register.Registers[PPURegister.PPUSTATUS_IDX];
+                Register.Registers[PPURegister.PPUSTATUS_IDX] &= 0x7F;
                 return result;
             }
-            else if (index == PPUCTRL)
+            else if (address == PPUCTRL_ADDR)
             {
-                return Register.PPUCTRL;
+                return Register.Registers[PPURegister.PPUCTRL_IDX];
             }
-            else if (index == PPUMASK)
+            else if (address == PPUMASK_ADDR)
             {
-                return Register.PPUMASK;
+                return Register.Registers[PPURegister.PPUMASK_IDX];
             }
-            else if (index == PPUDATA)
+            else if (address == PPUDATA_ADDR)
             {
                 byte result;
                 if (_ppuAddress <= 0x3EFF)
@@ -202,27 +205,36 @@ namespace FamiMan.Core
         }
 
         ushort _ppuAddress;
-        bool _expectingAddressHighByte = true;
+        bool _expectingFirstWrite = true;
 
         public void WriteCpuRegister(ushort index, byte value)
         {
-            if (index == PPUSTATUS) 
-            { 
-                Register.PPUSTATUS = value;
-            }
-            else if (index == PPUCTRL)
+            if (index == PPUSTATUS_ADDR) 
             {
-                Register.PPUCTRL = value;
+                Register.Registers[PPURegister.PPUSTATUS_IDX] = value;
             }
-            else if (index == PPUMASK)
+            else if (index == PPUCTRL_ADDR)
             {
-                Register.PPUMASK = value;
+                Register.Registers[PPURegister.PPUCTRL_IDX] = value;
             }
-            else if (index == PPUADDR)
+            else if (index == PPUMASK_ADDR)
+            {
+                Register.Registers[PPURegister.PPUMASK_IDX] = value;
+            }
+            else if (index == PPUSCROLL_ADDR)
+            {
+                if (_expectingFirstWrite)
+                    ScrollX = value;
+                else
+                    ScrollY = value;
+
+                _expectingFirstWrite = !_expectingFirstWrite;
+            }
+            else if (index == PPUADDR_ADDR)
             {
                 WritePpuAddress(value);
             }
-            else if (index == PPUDATA)
+            else if (index == PPUDATA_ADDR)
             {
                 WritePpuMemory(_ppuAddress, value);
                 IncrementPpuAddress();
@@ -245,18 +257,18 @@ namespace FamiMan.Core
 
         private void WritePpuAddress(byte value)
         {
-            if (_expectingAddressHighByte)
+            if (_expectingFirstWrite)
             {
                 // Only six address bits are meaningful because PPU addresses are 14-bit.
                 // We got high bytes so move the value into the high byte of the 16-bit address and clear the low byte.
                 _ppuAddress = (ushort)((value & 0x3F) << 8);
-                _expectingAddressHighByte = false;
+                _expectingFirstWrite = false;
             }
             else
             {
                 // Bitwise OR to combine the high byte we already have with the low byte we just got.
                 _ppuAddress |= value;
-                _expectingAddressHighByte = true;
+                _expectingFirstWrite = true;
             }
         }
 
@@ -298,12 +310,24 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetNametableTileNumber(int x, int y)
         {
+            // PPUCTRL bit 0 and 1 select which nametable starts at top left
+            /*
+             *  Bits 1–0	Starting nametable
+                00	        $2000
+                01	        $2400
+                10	        $2800
+                11	        $2C00
+            */
+
+            int selectedTable = Register.PPUCTRL & 0x03;
+            int baseAddr = selectedTable * 0x400;
+
             // Each tile is 8x8px
             int tileColumn = x / 8;
             int tileRow = y / 8;
 
             // nametable is a grid containing 32 tile numbers per row
-            return _nametableRam[(tileRow * 32) + tileColumn];
+            return _nametableRam[baseAddr + (tileRow * 32) + tileColumn];
         }
 
         /// <summary>
@@ -362,6 +386,29 @@ namespace FamiMan.Core
             return ReadPpuMemory((ushort)(PALETTE_START + (paletteNumber * 4) + colorIndex));
         }
 
+        /// <summary>
+        /// Builds one 256x240 frame of NES palette indices. Converting those
+        /// indices to host ARGB colors belongs to NesSystemPalette/the UI.
+        /// </summary>
+        public byte[] RenderBackgroundFrame()
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Reports one completed frame to the host and clears the notification
+        /// so the same frame is not presented repeatedly.
+        /// </summary>
+        public bool ConsumeFrameComplete()
+        {
+            if (FrameComplete)
+            {
+                FrameComplete = false;
+                return true;
+            }
+            return false;
+        }
+
         public void Tick()
         {
             Cycle++;
@@ -378,7 +425,13 @@ namespace FamiMan.Core
 
 
             if (Scanline == 241 && Cycle == 1)
+            {
                 Register.PPUSTATUS |= 0x80; // Set bit 7
+                if ((Register.PPUCTRL & 0x80) != 0)
+                {
+                    _b.Cpu.RequestInterrupt(InterruptType.NMI);
+                }
+            }
 
             if (Scanline == 261 && Cycle == 1)
                 Register.PPUSTATUS &= 0x7F; // Clear bit 7
@@ -393,10 +446,13 @@ namespace FamiMan.Core
 
     public class PPURegister
     {
-        public PPURegister()
+        public PPURegister(Ppu ppu)
         {
+            _ppu = ppu;
             _registers = new byte[9];
         }
+
+        private Ppu _ppu;
 
         private byte[] _registers { get; set; }
 
@@ -409,51 +465,92 @@ namespace FamiMan.Core
             }
         }
 
+        public const int PPUCTRL_IDX = 0;
+        public const int PPUMASK_IDX = 1;
+        public const int PPUSTATUS_IDX = 2;
+        public const int OAMADDR_IDX = 3;
+        public const int OAMDATA_IDX = 4;
+        public const int PPUSCROLL_IDX = 5;
+        public const int OAMDMA_IDX = 8;
+
         public byte PPUCTRL
         {
-            get => _registers[0];
-            set => _registers[0] = value;
+            get
+            {
+                return _ppu.ReadCpuRegister(Ppu.PPUCTRL_ADDR);
+            }
+            set
+            {
+                _registers[PPUCTRL_IDX] = value;
+            }
         }
 
         public byte PPUMASK
         {
-            get => _registers[1];
-            set => _registers[1] = value;
+            get
+            {
+                return _ppu.ReadCpuRegister(Ppu.PPUMASK_ADDR);
+            }
+            set
+            {
+                _registers[PPUMASK_IDX] = value;
+            }
         }
 
         public byte PPUSTATUS
         {
-            get => _registers[2]; set => _registers[2] = value;
+            get
+            {
+                return _ppu.ReadCpuRegister(Ppu.PPUSTATUS_ADDR);
+            }
+            set
+            {
+                _registers[PPUSTATUS_IDX] = value;
+            }
         }
 
         public byte OAMADDR
         {
-            get => _registers[3]; set => _registers[3] = value;
+            get => _registers[OAMADDR_IDX]; set => _registers[OAMADDR_IDX] = value;
         }
 
         public byte OAMDATA
         {
-            get => _registers[4]; set => _registers[4] = value;
+            get => _registers[OAMDATA_IDX]; set => _registers[OAMDATA_IDX] = value;
         }
 
         public byte PPUSCROLL
         {
-            get => _registers[5]; set => _registers[5] = value;
+            get => _registers[PPUSCROLL_IDX]; set => _registers[PPUSCROLL_IDX] = value;
         }
 
         public byte PPUADDR
         {
-            get => _registers[6]; set => _registers[6] = value;
+            get
+            {
+                return _ppu.ReadCpuRegister(Ppu.PPUADDR_ADDR);
+            }
+            set
+            {
+                _ppu.WriteCpuRegister(Ppu.PPUADDR_ADDR, value);
+            }
         }
 
         public byte PPUDATA
         {
-            get => _registers[7]; set => _registers[7] = value;
+            get
+            {
+                return _ppu.ReadCpuRegister(Ppu.PPUDATA_ADDR);
+            }
+            set
+            {
+                _ppu.WriteCpuRegister(Ppu.PPUDATA_ADDR, value);
+            }
         }
 
         public byte OAMDMA
         {
-            get => _registers[8]; set => _registers[8] = value;
+            get => _registers[OAMDMA_IDX]; set => _registers[OAMDMA_IDX] = value;
         }
 
     }

@@ -1,4 +1,5 @@
 using Xunit;
+using static FamiMan.Core.Opcodes;
 
 namespace FamiMan.Core.Tests
 {
@@ -6,7 +7,7 @@ namespace FamiMan.Core.Tests
     /// CPU-bus accesses to PPU registers are operations, not ordinary byte
     /// storage. These tests are the reason the CPU no longer uses the ref indexer.
     /// </summary>
-    public class CpuBusPpuSideEffectRegressionTests
+    public class CpuBusPpuRegisterTests
     {
         [Fact]
         public void CpuBusWritesThroughPpuAddrAndPpuDataToPpuMemory()
@@ -45,6 +46,40 @@ namespace FamiMan.Core.Tests
             bus.Write(0x200F, 0x37);
 
             Assert.Equal(0x37, bus.Ppu.ReadPpuMemory(0x2000));
+        }
+
+        [Fact]
+        public void CpuProgramCanUploadBackgroundTileAndPaletteThroughPpuRegisters()
+        {
+            var bus = CreateBusWithChr();
+            bus.Cpu.PC = 0x0200;
+
+            // This is the same kind of CPU code a game uses: select a PPU
+            // address with $2006, then upload a value through $2007.
+            byte[] program =
+            {
+                LDA.Immediate.Opcode, 0x20,
+                STA.Absolute.Opcode, 0x06, 0x20,
+                LDA.Immediate.Opcode, 0x00,
+                STA.Absolute.Opcode, 0x06, 0x20,
+                LDA.Immediate.Opcode, 0x01,
+                STA.Absolute.Opcode, 0x07, 0x20,
+
+                LDA.Immediate.Opcode, 0x3F,
+                STA.Absolute.Opcode, 0x06, 0x20,
+                LDA.Immediate.Opcode, 0x01,
+                STA.Absolute.Opcode, 0x06, 0x20,
+                LDA.Immediate.Opcode, 0x21,
+                STA.Absolute.Opcode, 0x07, 0x20
+            };
+
+            for (int i = 0; i < program.Length; i++)
+                bus.Write((ushort)(0x0200 + i), program[i]);
+
+            bus.Cpu.Tick(36);
+
+            Assert.Equal(0x01, bus.Ppu.ReadPpuMemory(0x2000));
+            Assert.Equal(0x21, bus.Ppu.ReadPpuMemory(0x3F01));
         }
 
         private static Bus CreateBusWithChr()

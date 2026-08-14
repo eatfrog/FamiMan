@@ -8,12 +8,12 @@ namespace FamiMan.Core.Tests.Opcodes
     /// Each test describes one independent rule so it can be fixed and checked
     /// without having to diagnose a full ROM trace.
     /// </summary>
-    public class CpuRegressionTests
+    public class CpuInstructionSemanticsTests
     {
         private readonly Bus _bus;
         private readonly Cpu _cpu;
 
-        public CpuRegressionTests()
+        public CpuInstructionSemanticsTests()
         {
             _bus = new Bus();
             _cpu = _bus.Cpu;

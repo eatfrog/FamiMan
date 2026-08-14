@@ -8,7 +8,7 @@ namespace FamiMan.Core.Tests
     /// The smallest PPU memory behaviors needed before background pixels can
     /// be rendered. These deliberately exclude sprites, scrolling, and timing.
     /// </summary>
-    public class PpuMemoryRegressionTests
+    public class PpuMemoryMappingTests
     {
         [Fact]
         public void PatternTableReadsComeFromCartridgeChr()

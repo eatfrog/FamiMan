@@ -3,7 +3,7 @@ using static FamiMan.Core.Opcodes;
 
 namespace FamiMan.Core.Tests.Opcodes
 {
-    public class NestestRegressionTests
+    public class CpuStatusAndRegisterSemanticsTests
     {
         [Theory]
         [InlineData(AND.Immediate.Opcode, 0x01, true)]

@@ -7,7 +7,7 @@ namespace FamiMan.Core.Tests
     /// nametable and CHR data can be turned into background pixels. Sprites and
     /// fine scrolling deliberately come later.
     /// </summary>
-    public class PpuTimingAndBackgroundRegressionTests
+    public class PpuTimingAndBackgroundRenderingTests
     {
         [Fact]
         public void PpuAdvancesToNextScanlineAfter341Cycles()
@@ -97,7 +97,7 @@ namespace FamiMan.Core.Tests
         {
             var bus = CreateBusWithChr();
 
-            bus.Ppu.WriteCpuRegister(Ppu.PPUCTRL, ppuCtrl);
+            bus.Ppu.WriteCpuRegister(Ppu.PPUCTRL_ADDR, ppuCtrl);
 
             Assert.Equal(
                 expectedAddress,
@@ -134,6 +134,22 @@ namespace FamiMan.Core.Tests
             bus.Ppu.WritePpuMemory(0x2041, 0x2A);
 
             Assert.Equal(0x2A, bus.Ppu.GetNametableTileNumber(8, 16));
+        }
+
+        [Fact]
+        public void PpuCtrlNametableSelectChoosesBackgroundNametable()
+        {
+            var bus = CreateBusWithChr();
+            bus.Ppu.Mirroring = NametableMirroring.Vertical;
+
+            bus.Ppu.WritePpuMemory(0x2000, 0x11);
+            bus.Ppu.WritePpuMemory(0x2400, 0x22);
+
+            // PPUCTRL bits 1-0 select which nametable appears at the top-left
+            // of the screen. Value 1 selects the nametable beginning at $2400.
+            bus.Ppu.WriteCpuRegister(Ppu.PPUCTRL_ADDR, 0x01);
+
+            Assert.Equal(0x22, bus.Ppu.GetNametableTileNumber(0, 0));
         }
 
         [Fact]
@@ -192,7 +208,7 @@ namespace FamiMan.Core.Tests
 
             // PPUCTRL bit 4 chooses where background tile graphics begin:
             // 0 means pattern table $0000 and 1 means pattern table $1000.
-            bus.Ppu.WriteCpuRegister(Ppu.PPUCTRL, 0b0001_0000);
+            bus.Ppu.WriteCpuRegister(Ppu.PPUCTRL_ADDR, 0b0001_0000);
 
             // The first nametable byte describes the tile at screen position
             // (0, 0). A value of 1 tells the PPU to draw CHR tile number 1.

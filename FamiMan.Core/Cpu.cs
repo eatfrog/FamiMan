@@ -39,9 +39,6 @@ namespace FamiMan.Core
         private const byte Z = 6;
         private const byte CARRY = 7;
 
-        private const byte ONE = 1;
-        private const byte ZERO = 0;
-
         private long _ticks = 0;
         private long _cyclesRemaining = 0;
         public bool Waiting = false;

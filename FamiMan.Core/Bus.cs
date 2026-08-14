@@ -22,6 +22,8 @@ namespace FamiMan.Core
         {
             Cpu.Tick();
             Ppu.Tick();
+            Ppu.Tick();
+            Ppu.Tick();
         }
 
         public void Reset()
@@ -45,28 +47,85 @@ namespace FamiMan.Core
         public IMapper Mapper { get; }
 
         /// <summary>
-        /// Reads one byte from the CPU address space. Device-specific read side
-        /// effects can now be implemented here instead of being hidden behind a ref.
+        /// Reads one byte from the CPU address space. 
         /// </summary>
         public byte Read(ushort address)
         {
-            return this[address];
+            if (address <= 0x1FFF)
+                return Ram.AsSpan()[address % 0x0800];
+
+            if (address <= 0x3FFF)
+            {
+                ushort registerAddress =
+                    (ushort)(0x2000 + ((address - 0x2000) % 8));
+
+                return Ppu.ReadCpuRegister(registerAddress);
+            }
+
+            // APU, controller, DMA...
+
+            if (address >= 0x6000)
+                return Mapper.ReadCpu(address);
+
+            return 0;
         }
 
         /// <summary>
-        /// Writes one byte to the CPU address space. Device-specific write side
-        /// effects can now be implemented here instead of being hidden behind a ref.
+        /// Writes one byte to the CPU address space. 
         /// </summary>
         public void Write(ushort address, byte value)
         {
-            this[address] = value;
+            if (address <= 0x1FFF)
+            {
+                Ram.AsSpan()[address % 0x0800] = value;
+                return;
+            }
+
+            if (address <= 0x3FFF)
+            {
+                ushort registerAddress =
+                    (ushort)(0x2000 + ((address - 0x2000) % 8));
+
+                Ppu.WriteCpuRegister(registerAddress, value);
+                return;
+            }
+
+            if (address == 0x4014)
+            {
+                Ppu.Register.OAMDMA = value;
+                return;
+            }
+
+            if (address >= 0x6000)
+            {
+                Mapper.WriteCpu(address, value);
+                return;
+            }
         }
 
-        // Kept temporarily for test setup and code that has not yet moved to the
-        // explicit CPU-bus API. The CPU itself no longer uses this ref indexer.
-        public ref byte this[ushort index]
+        /// <summary>
+        /// Initializes a byte in the currently loaded PRG-ROM image. This is
+        /// intended for test/debug setup; it is not a simulated CPU write.
+        /// </summary>
+        public void SetPrgRomByte(ushort cpuAddress, byte value)
         {
-            get => ref Mapper.GetByteAtAddress(index);
+            if (cpuAddress < 0x8000)
+                throw new ArgumentOutOfRangeException(
+                    nameof(cpuAddress),
+                    "PRG-ROM is mapped at CPU addresses $8000-$FFFF.");
+
+            if (IO.PRGROM is null || IO.PRGROM.Length == 0)
+                throw new InvalidOperationException(
+                    "A PRG-ROM image must be loaded or allocated first.");
+
+            int index = (cpuAddress - 0x8000) % IO.PRGROM.Length;
+            IO.PRGROM[index] = value;
+        }
+
+        public byte this[ushort address]
+        {
+            get => Read(address);
+            set => Write(address, value);
         }
     }
 }
