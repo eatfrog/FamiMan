@@ -1,0 +1,137 @@
+using Xunit;
+
+namespace FamiMan.Core.Tests;
+
+/// <summary>
+/// Focused steps for turning OAM entries into sprite pixels and compositing
+/// them with the existing background frame.
+/// </summary>
+public class PpuSpriteRenderingTests
+{
+    [Fact]
+    public void OneOpaqueSpritePixelAppearsInTheCompositedFrame()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x10); // Show sprites.
+
+        // Sprite tile 1, row 0, leftmost pixel has color index 1.
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x3F11, 0x21); // Sprite palette 0, color 1.
+
+        // OAM stores Y minus one, tile number, attributes, then X.
+        SetSprite(bus.Ppu, spriteIndex: 0, x: 20, y: 10, tile: 1, attributes: 0);
+
+        byte[] frame = bus.Ppu.RenderFrame();
+
+        Assert.Equal(0x21, frame[10 * 256 + 20]);
+    }
+
+    [Fact]
+    public void SpriteAttributeBitsZeroAndOneSelectSpritePalette()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x10);
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x3F11, 0x11); // Palette 0, color 1.
+        bus.Ppu.WritePpuMemory(0x3F19, 0x30); // Palette 2, color 1.
+        SetSprite(bus.Ppu, 0, x: 20, y: 10, tile: 1, attributes: 0b0000_0010);
+
+        byte[] frame = bus.Ppu.RenderFrame();
+
+        Assert.Equal(0x30, frame[10 * 256 + 20]);
+    }
+
+    [Fact]
+    public void HorizontalFlipMovesTheLeftmostTilePixelToTheRightEdge()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x10);
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x3F11, 0x21);
+        bus.Ppu.WritePpuMemory(0x3F00, 0x0F);
+        SetSprite(bus.Ppu, 0, x: 20, y: 10, tile: 1, attributes: 0b0100_0000);
+
+        byte[] frame = bus.Ppu.RenderFrame();
+
+        Assert.Equal(0x0F, frame[10 * 256 + 20]);
+        Assert.Equal(0x21, frame[10 * 256 + 27]);
+    }
+
+    [Fact]
+    public void VerticalFlipMovesTheTopTilePixelToTheBottomEdge()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x10);
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x3F11, 0x21);
+        bus.Ppu.WritePpuMemory(0x3F00, 0x0F);
+        SetSprite(bus.Ppu, 0, x: 20, y: 10, tile: 1, attributes: 0b1000_0000);
+
+        byte[] frame = bus.Ppu.RenderFrame();
+
+        Assert.Equal(0x0F, frame[10 * 256 + 20]);
+        Assert.Equal(0x21, frame[17 * 256 + 20]);
+    }
+
+    [Fact]
+    public void SpriteColorZeroIsTransparentAndLeavesBackgroundVisible()
+    {
+        var bus = CreateBusWithChr();
+        // Show background and sprites, including both in the leftmost 8 pixels.
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x1E);
+
+        // Background tile 1 is opaque at screen pixel (0, 16).
+        bus.Ppu.WritePpuMemory(0x2040, 0x01);
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x3F01, 0x21);
+
+        // Sprite tile 2 has no pattern bits, so its pixel color is zero.
+        SetSprite(bus.Ppu, 0, x: 0, y: 16, tile: 2, attributes: 0);
+
+        byte[] frame = bus.Ppu.RenderFrame();
+
+        Assert.Equal(0x21, frame[16 * 256]);
+    }
+
+    [Fact]
+    public void SpritePriorityBitPlacesSpriteBehindOpaqueBackground()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x1E);
+
+        bus.Ppu.WritePpuMemory(0x2040, 0x01);
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x0020, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x3F01, 0x21); // Background color.
+        bus.Ppu.WritePpuMemory(0x3F11, 0x16); // Sprite color.
+
+        // Attribute bit 5 means the sprite goes behind opaque background pixels.
+        SetSprite(bus.Ppu, 0, x: 0, y: 16, tile: 2, attributes: 0b0010_0000);
+
+        byte[] frame = bus.Ppu.RenderFrame();
+
+        Assert.Equal(0x21, frame[16 * 256]);
+    }
+
+    private static void SetSprite(
+        Ppu ppu,
+        int spriteIndex,
+        byte x,
+        byte y,
+        byte tile,
+        byte attributes)
+    {
+        byte start = (byte)(spriteIndex * 4);
+        ppu.SetOamByte(start, (byte)(y - 1));
+        ppu.SetOamByte((byte)(start + 1), tile);
+        ppu.SetOamByte((byte)(start + 2), attributes);
+        ppu.SetOamByte((byte)(start + 3), x);
+    }
+
+    private static Bus CreateBusWithChr()
+    {
+        var bus = new Bus();
+        bus.IO.CHRROM = new byte[8_192];
+        return bus;
+    }
+}

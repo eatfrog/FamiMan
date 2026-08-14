@@ -16,6 +16,7 @@ namespace FamiMan.Core
             Ppu = new Ppu(this);
             IO = new IO(this);
             Apu = new Apu(this);
+            Controller1 = new NesController();
         }
 
         public void Clock()
@@ -41,6 +42,8 @@ namespace FamiMan.Core
         public Ppu Ppu { get; set; }
 
         public Apu Apu { get; set; }
+
+        public NesController Controller1 { get; }
 
         public IO IO { get; set; }
 
@@ -81,7 +84,7 @@ namespace FamiMan.Core
                 return;
             }
 
-            if (address <= 0x3FFF)
+            else if (address <= 0x3FFF)
             {
                 ushort registerAddress =
                     (ushort)(0x2000 + ((address - 0x2000) % 8));
@@ -89,14 +92,31 @@ namespace FamiMan.Core
                 Ppu.WriteCpuRegister(registerAddress, value);
                 return;
             }
-
-            if (address == 0x4014)
+            else if (address == Ppu.OAMADDR_ADDR)
             {
+                // select destination address in OAM ie where to copy to
+                Ppu.Register.OAMADDR = value;
+                return;
+            }
+            else if (address == Ppu.OAMDMA_ADDR)
+            {
+                // Select source page in CPU ram ie where to copy from
+                // AND start the DMA copy
                 Ppu.Register.OAMDMA = value;
+
+                ushort sourceStart = (ushort)(value << 8);
+                byte oamStart = Ppu.Register.OAMADDR;
+                for (int offset = 0; offset < 0x100; offset++)
+                {
+                    byte data = Read((ushort)(sourceStart + offset));
+                    byte destination = unchecked((byte)(oamStart + offset));
+
+                    Ppu.SetOamByte(destination, data);
+                }
                 return;
             }
 
-            if (address >= 0x6000)
+            else if (address >= 0x6000)
             {
                 Mapper.WriteCpu(address, value);
                 return;

@@ -15,14 +15,16 @@ namespace FamiMan.Core
 
         private readonly byte[] _nametableRam = new byte[0x800];
         private readonly byte[] _paletteRam = new byte[0x20];
+        private readonly byte[] _oam = new byte[0x100];
 
-        public const ushort PPUCTRL_ADDR   = 0x2000;
-        public const ushort PPUMASK_ADDR   = 0x2001;
-        public const ushort PPUSTATUS_ADDR = 0x2002;
-        public const ushort OAMADDR_ADDR   = 0x2003;
-        public const ushort PPUSCROLL_ADDR = 0x2005;
-        public const ushort PPUADDR_ADDR   = 0x2006;
-        public const ushort PPUDATA_ADDR   = 0x2007;
+        public const ushort PPUCTRL_ADDR    = 0x2000;
+        public const ushort PPUMASK_ADDR    = 0x2001;
+        public const ushort PPUSTATUS_ADDR  = 0x2002;
+        public const ushort OAMADDR_ADDR    = 0x2003;
+        public const ushort PPUSCROLL_ADDR  = 0x2005;
+        public const ushort PPUADDR_ADDR    = 0x2006;
+        public const ushort PPUDATA_ADDR    = 0x2007;
+        public const ushort OAMDMA_ADDR     = 0x4014;
 
         public const ushort NAMETABLE_START = 0x2000;
         public const ushort NAMETABLE_ATTR_START = 0x23C0;
@@ -68,6 +70,20 @@ namespace FamiMan.Core
         public bool FrameComplete { get; private set; }
         public byte ScrollX { get; private set; }
         public byte ScrollY { get; private set; }
+
+        /// <summary>
+        /// Initializes one byte of sprite OAM independently of the CPU-visible
+        /// OAM registers. Intended for focused sprite tests and debugging.
+        /// </summary>
+        public void SetOamByte(byte address, byte value)
+        {
+            _oam[address] = value;
+        }
+
+        public byte ReadOamByte(byte address)
+        {
+            return _oam[address];
+        }
 
         /// <summary>
         /// Reads the PPU's separate $0000-$3FFF address space.
@@ -224,6 +240,7 @@ namespace FamiMan.Core
             }
             else if (index == OAMADDR_ADDR)
             {
+                // Set the destination position in OAM
                 Register.OAMADDR = value;
             }
             else if (index == PPUSCROLL_ADDR)
@@ -279,16 +296,18 @@ namespace FamiMan.Core
         }
 
         /// <summary>
-        /// Returns the NES palette value for one background pixel. This keeps
-        /// tile decoding separate from the eventual framebuffer/SDL work.
+        /// Returns the NES palette value for one background pixel.
         /// </summary>
         public byte GetBackgroundPixel(int x, int y)
         {
-            var tilenumber = GetNametableTileNumber(x, y);
-            int tileX = x % 8;
-            int tileY = y % 8;
+            // screen coordinates and world coordinates are different because the background can be scrolled. The scroll values are set by the CPU through PPUSCROLL.
+            int scrolledX = x + ScrollX;
+            int scrolledY = y + ScrollY;
+            var tilenumber = GetNametableTileNumber(scrolledX, scrolledY);
+            int tileX = scrolledX % 8;
+            int tileY = scrolledY % 8;
             var idx = GetTilePixelColorIndex(tilenumber, tileX, tileY);
-            var palette = GetBackgroundPaletteNumber(x, y);
+            var palette = GetBackgroundPaletteNumber(scrolledX, scrolledY);
             return GetBackgroundPaletteValue(palette, idx);
         }
 
@@ -325,15 +344,40 @@ namespace FamiMan.Core
                 11	        $2C00
             */
 
-            int selectedTable = Register.PPUCTRL & 0x03;
+            int baseTable = Register.PPUCTRL & 0x03;
+
+            // Convert table number 0–3 into a row and column.
+            // The four nametables represent a 2x2 grid, so we can use modulo and division to get the row and column.
+            int baseTableColumn = baseTable % 2;
+            int baseTableRow = baseTable / 2;
+
+            // are we in left or right nametable of that row
+            int nametableOffsetX = x / 256;
+
+            // are we in top or bottom nametable of that column
+            int nametableOffsetY = y / 240;
+
+            // Move to the table on the right when offset is 1 (with wrap around)
+            int selectedTableColumn = (baseTableColumn + nametableOffsetX) % 2;
+            
+            // Move to the table downwards if offset is 1 (with wrap around)
+            int selectedTableRow = (baseTableRow + nametableOffsetY) % 2;
+
+            int selectedTable = selectedTableRow * 2 + selectedTableColumn;
             int baseAddr = selectedTable * 0x400;
 
+            // where in the actual nametable are we? 0-255, 0-239 since each nametable is 256x240px
+            int localX = x % 256;
+            int localY = y % 240;
+
+            // which column of the nametable are we in? 0-31 since each column is 8px
+            int tileColumn = localX / 8;
+
             // Each tile is 8x8px
-            int tileColumn = x / 8;
-            int tileRow = y / 8;
+            int tileRow = localY / 8;
 
             // nametable is a grid containing 32 tile numbers per row
-            return _nametableRam[baseAddr + (tileRow * 32) + tileColumn];
+            return ReadPpuMemory((ushort) (NAMETABLE_START + baseAddr + (tileRow * 32) + tileColumn));
         }
 
         /// <summary>
@@ -419,6 +463,15 @@ namespace FamiMan.Core
                 }
             }
             return ret;
+        }
+
+        /// <summary>
+        /// Builds the final palette-index frame after sprites are composited
+        /// with the background.
+        /// </summary>
+        public byte[] RenderFrame()
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
