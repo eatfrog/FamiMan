@@ -46,13 +46,23 @@ namespace FamiMan.Core.Tests
         {
             var bus = CreateBusWithChr();
 
+            // tile 1 is at the start of the nametable
+            // so 0,0 comes from tile 1
             bus.Ppu.WritePpuMemory(Ppu.NAMETABLE_START, 0x01);
+
+            // tile 1 is at 0x0010 in CHR ROM, set bit 7 on it which means
+            // that the color index is 1 for leftmost pixel
             bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
-            bus.Ppu.WritePpuMemory(0x3F01, 0x21);
+
+            // no attributes are written so we have palette 0
+            // set color to 0x21 for palette 0, color index 1
+            bus.Ppu.WritePpuMemory(Ppu.PALETTE_START + 1, 0x21);
 
             byte[] frame = bus.Ppu.RenderBackgroundFrame();
 
             Assert.Equal(256 * 240, frame.Length);
+
+            // so the first pixel that we see should be of color 0x21, which is the color we set for palette 0, color index 1
             Assert.Equal(0x21, frame[0]);
         }
 

@@ -490,16 +490,12 @@ namespace FamiMan.Core
                 case Instruction.STA:
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
                     addr = ApplyIndex(addr, opcode.AddressingMode);
-                    if (addr == SP) throw new InvalidOperationException("Attempting to write over stack pointer");
-
                     _bus.Write(addr, A);
                     break;
                 case Instruction.STX:
                 case Instruction.STY:
                     addr = ManageMemoryMapMode(addr, opcode.MemoryMappingMode);
                     addr = ApplyIndex(addr, opcode.AddressingMode);
-
-                    if (addr == SP) throw new InvalidOperationException("Attempting to write over stack pointer");
 
                     if (opcode.Instruction == Instruction.STX)
                         _bus.Write(addr, X);

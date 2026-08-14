@@ -19,6 +19,7 @@ namespace FamiMan.Core
         public const ushort PPUCTRL_ADDR   = 0x2000;
         public const ushort PPUMASK_ADDR   = 0x2001;
         public const ushort PPUSTATUS_ADDR = 0x2002;
+        public const ushort OAMADDR_ADDR   = 0x2003;
         public const ushort PPUSCROLL_ADDR = 0x2005;
         public const ushort PPUADDR_ADDR   = 0x2006;
         public const ushort PPUDATA_ADDR   = 0x2007;
@@ -221,6 +222,10 @@ namespace FamiMan.Core
             {
                 Register.Registers[PPURegister.PPUMASK_IDX] = value;
             }
+            else if (index == OAMADDR_ADDR)
+            {
+                Register.OAMADDR = value;
+            }
             else if (index == PPUSCROLL_ADDR)
             {
                 if (_expectingFirstWrite)
@@ -242,7 +247,8 @@ namespace FamiMan.Core
             }
             else
             {
-                throw new InvalidOperationException("Invalid memory address access in PPU");
+                throw new InvalidOperationException(
+                    $"Invalid write to CPU-visible PPU register ${index:X4}");
 
             }
         }
@@ -366,7 +372,8 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetBackgroundPaletteNumber(int x, int y)
         {
-            // each background tile is 32x32px
+            // each attribute background tile is 32x32px
+            // divided into four 16x16px quadrants
             // each row of tiles in attr table is 8 tiles
             int attributeColumn = x / 32;
             int attributeRow = y / 32;
@@ -374,7 +381,16 @@ namespace FamiMan.Core
             ushort attributeAddress =
                 (ushort)(0x23C0 + attributeRow * 8 + attributeColumn);
 
-            return ReadPpuMemory(attributeAddress);
+            // get the 32x32px attribute byte and select the correct quadrant
+            int attributeValue = ReadPpuMemory(attributeAddress);
+            int quadrantColumn = (x % 32) / 16; // 0 = left, 1 = right
+            int quadrantRow = (y % 32) / 16;    // 0 = top,  1 = bottom
+
+            // how much do we need to shift the bytes to get the correct quadrant's palette number into bits 0 and 1?
+            int shift = (quadrantRow * 2 + quadrantColumn) * 2; // we want two bits for the palette number, so multiply by 2
+
+            // move the relevant bits down to bit 0 and 1
+            return (byte)((attributeValue >> shift) & 3);
         }
 
         /// <summary>
@@ -383,6 +399,7 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetBackgroundPaletteValue(byte paletteNumber, byte colorIndex)
         {
+            if (colorIndex == 0) paletteNumber = 0; // color index 0 always uses the universal background color at $3F00
             return ReadPpuMemory((ushort)(PALETTE_START + (paletteNumber * 4) + colorIndex));
         }
 
@@ -392,7 +409,16 @@ namespace FamiMan.Core
         /// </summary>
         public byte[] RenderBackgroundFrame()
         {
-            throw new NotImplementedException();
+            var ret = new byte[256*240];
+
+            for (int y = 0; y < 240; y++)
+            {
+                for (int x = 0; x < 256; x++)
+                {
+                    ret[y * 256 + x] = GetBackgroundPixel(x, y);
+                }
+            }
+            return ret;
         }
 
         /// <summary>
