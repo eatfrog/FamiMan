@@ -47,8 +47,10 @@ public class ControllerInputTests
         Assert.Equal(1, bus.Read(0x4016) & 1);
 
         // A new strobe takes a new snapshot.
+        bus.Controller1.SetButton(ControllerButton.B, true);
         bus.Write(0x4016, 1);
         bus.Write(0x4016, 0);
         Assert.Equal(0, bus.Read(0x4016) & 1);
+        Assert.Equal(1, bus.Read(0x4016) & 1);
     }
 }

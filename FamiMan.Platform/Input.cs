@@ -3,6 +3,7 @@ namespace FamiMan.Platform;
 public enum Key
 {
     Unknown,
+    D,
     Q,
     Escape,
     Up,

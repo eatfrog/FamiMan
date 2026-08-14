@@ -213,6 +213,7 @@ public sealed unsafe class GameWindow : IDisposable
 
     private static Key MapKey(SDL_Keycode keycode) => keycode switch
     {
+        SDL_Keycode.SDLK_d => Key.D,
         SDL_Keycode.SDLK_q => Key.Q,
         SDL_Keycode.SDLK_ESCAPE => Key.Escape,
         SDL_Keycode.SDLK_UP => Key.Up,

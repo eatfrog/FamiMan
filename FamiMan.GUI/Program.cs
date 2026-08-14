@@ -22,7 +22,7 @@ internal class Program
         while (!quit)
         {
             RunUntilNextFrame(bus);
-            CopyBackgroundFrameToArgb(bus.Ppu, framebuffer);
+            CopyFrameToArgb(bus.Ppu, framebuffer);
 
             window.Clear(Color.Black);
 
@@ -40,14 +40,19 @@ internal class Program
                             break;
                         }
 
+                        SetControllerButton(bus.Controller1, windowEvent.Key, pressed: true);
                         debugOverlay.HandleKeyDown(windowEvent.Key);
+                        break;
+                    case WindowEventType.KeyUp:
+                        SetControllerButton(bus.Controller1, windowEvent.Key, pressed: false);
                         break;
                 }
             }
 
-            window.DrawFrame(framebuffer, NesWidth, NesHeight, DebugOverlay.SidebarWidth);
+            window.DrawFrame(framebuffer, NesWidth, NesHeight, debugOverlay.LeftInset);
             debugOverlay.Render(window, bus, cpu);
             window.Present();
+            debugOverlay.FramePresented();
             Thread.Sleep(16);
         }
     }
@@ -80,11 +85,33 @@ internal class Program
         while (!bus.Ppu.ConsumeFrameComplete());
     }
 
-    private static void CopyBackgroundFrameToArgb(Ppu ppu, uint[] destination)
+    private static void CopyFrameToArgb(Ppu ppu, uint[] destination)
     {
-        byte[] paletteIndices = ppu.RenderBackgroundFrame();
+        byte[] paletteIndices = ppu.RenderFrame();
 
         for (int i = 0; i < paletteIndices.Length; i++)
             destination[i] = NesSystemPalette.ToArgb(paletteIndices[i]);
+    }
+
+    private static void SetControllerButton(
+        NesController controller,
+        Key key,
+        bool pressed)
+    {
+        ControllerButton? button = key switch
+        {
+            Key.Z => ControllerButton.A,
+            Key.X => ControllerButton.B,
+            Key.RightShift => ControllerButton.Select,
+            Key.Enter => ControllerButton.Start,
+            Key.Up => ControllerButton.Up,
+            Key.Down => ControllerButton.Down,
+            Key.Left => ControllerButton.Left,
+            Key.Right => ControllerButton.Right,
+            _ => null
+        };
+
+        if (button is ControllerButton mappedButton)
+            controller.SetButton(mappedButton, pressed);
     }
 }

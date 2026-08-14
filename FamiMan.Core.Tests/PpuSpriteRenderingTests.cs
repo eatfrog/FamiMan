@@ -27,6 +27,26 @@ public class PpuSpriteRenderingTests
     }
 
     [Fact]
+    public void CompositedFrameIncludesSpritesBeyondSpriteZero()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x10); // Show sprites.
+
+        // Sprite tile 1 has one opaque pixel at its top-left corner.
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x3F11, 0x21); // Sprite palette 0, color 1.
+
+        // Sprite 0 is reserved for special timing in games such as SMB. Mario
+        // and other visible objects occupy later OAM entries, so the completed
+        // frame must consider more than sprite 0.
+        SetSprite(bus.Ppu, spriteIndex: 1, x: 20, y: 10, tile: 1, attributes: 0);
+
+        byte[] frame = bus.Ppu.RenderFrame();
+
+        Assert.Equal(0x21, frame[10 * 256 + 20]);
+    }
+
+    [Fact]
     public void SpriteAttributeBitsZeroAndOneSelectSpritePalette()
     {
         var bus = CreateBusWithChr();
@@ -111,6 +131,32 @@ public class PpuSpriteRenderingTests
         byte[] frame = bus.Ppu.RenderFrame();
 
         Assert.Equal(0x21, frame[16 * 256]);
+    }
+
+    [Fact]
+    public void OpaqueSpriteZeroOverOpaqueBackgroundSetsSpriteZeroHit()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x1E);
+
+        // $2021 is nametable tile row 1, column 1, whose top-left screen
+        // coordinate is (8,8). It selects background tile 1.
+        bus.Ppu.WritePpuMemory(0x2021, 0x01);
+
+        // Bit 7 of each tile's first low-bitplane row makes its top-left pixel
+        // color index 1: non-transparent for both background and sprite 0.
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x0020, 0b1000_0000);
+        SetSprite(bus.Ppu, 0, x: 8, y: 8, tile: 2, attributes: 0);
+
+        // Visible cycle 1 is X=0, so scanline 8/cycle 9 reaches pixel (8,8).
+        for (int i = 0; i < 8 * 341 + 9; i++)
+            bus.Ppu.Tick();
+
+        // PPUSTATUS bit 6 records the opaque sprite-0/background overlap.
+        Assert.NotEqual(
+            0,
+            bus.Ppu.Register.Registers[PPURegister.PPUSTATUS_IDX] & 0x40);
     }
 
     private static void SetSprite(

@@ -1,5 +1,6 @@
 using FamiMan.Core;
 using FamiMan.Platform;
+using System.Diagnostics;
 
 namespace FamiMan.GUI.UI
 {
@@ -12,13 +13,21 @@ namespace FamiMan.GUI.UI
         private bool _breaked;
         private ushort _lastPC;
         private string _debugText = string.Empty;
+        private readonly Stopwatch _fpsTimer = Stopwatch.StartNew();
+        private int _framesSinceFpsUpdate;
+        private double _framesPerSecond;
 
         public int WaitTime => _waitTime;
+        public bool Visible { get; private set; }
+        public int LeftInset => Visible ? SidebarWidth : 0;
 
         public void HandleKeyDown(Key key)
         {
             switch (key)
             {
+                case Key.D:
+                    Visible = !Visible;
+                    break;
                 case Key.Down:
                     _waitTime++;
                     break;
@@ -27,6 +36,18 @@ namespace FamiMan.GUI.UI
                         _waitTime--;
                     break;
             }
+        }
+
+        public void FramePresented()
+        {
+            _framesSinceFpsUpdate++;
+
+            if (_fpsTimer.Elapsed.TotalSeconds < 1)
+                return;
+
+            _framesPerSecond = _framesSinceFpsUpdate / _fpsTimer.Elapsed.TotalSeconds;
+            _framesSinceFpsUpdate = 0;
+            _fpsTimer.Restart();
         }
 
         public void UpdateInstructionDebug(Bus bus, Cpu cpu)
@@ -69,6 +90,9 @@ namespace FamiMan.GUI.UI
 
         public void Render(GameWindow window, Bus bus, Cpu cpu)
         {
+            if (!Visible)
+                return;
+
             WriteRow(window, "PC: " + cpu.PC.ToString("X") + " - " + cpu.CurrentInstruction, 0);
             WriteRow(window, "A: " + cpu.A, 1);
             WriteRow(window, "X: " + cpu.X, 2);
@@ -82,6 +106,7 @@ namespace FamiMan.GUI.UI
             WriteRow(window, "Waiting: " + cpu.Waiting, 8);
             WriteRow(window, "Last debug: " + _debugText, 9);
             WriteRow(window, "Wait: " + _waitTime, 10);
+            WriteRow(window, $"FPS: {_framesPerSecond:F1}", 11);
         }
 
         private static void WriteRow(GameWindow window, string text, int row) =>
@@ -100,8 +125,12 @@ namespace FamiMan.GUI.UI
         public const int SidebarWidth = 0;
 
         public int WaitTime => 0;
+        public bool Visible => false;
+        public int LeftInset => 0;
 
         public void HandleKeyDown(Key key) { }
+
+        public void FramePresented() { }
 
         public void UpdateInstructionDebug(Bus bus, Cpu cpu) { }
 

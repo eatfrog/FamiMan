@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Numerics;
 using System.Text;
 using FamiMan.Core.Interfaces;
 using FamiMan.Core.Mappers;
@@ -49,6 +50,8 @@ namespace FamiMan.Core
 
         public IMapper Mapper { get; }
 
+
+        private bool _controllerLatch;
         /// <summary>
         /// Reads one byte from the CPU address space. 
         /// </summary>
@@ -66,8 +69,11 @@ namespace FamiMan.Core
             }
 
             // APU, controller, DMA...
-
-            if (address >= 0x6000)
+            else if (address == 0x4016)
+            {
+                return Controller1.Read();
+            }
+            else if (address >= 0x6000)
                 return Mapper.ReadCpu(address);
 
             return 0;
@@ -115,7 +121,15 @@ namespace FamiMan.Core
                 }
                 return;
             }
-
+            else if (address == 0x4016)
+            {
+                var previousValue = _controllerLatch;
+                _controllerLatch = value == 1;
+                if (previousValue && !_controllerLatch)
+                {
+                    Controller1.Latch();
+                }
+            }
             else if (address >= 0x6000)
             {
                 Mapper.WriteCpu(address, value);

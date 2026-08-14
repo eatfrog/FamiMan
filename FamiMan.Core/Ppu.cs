@@ -30,6 +30,7 @@ namespace FamiMan.Core
         public const ushort NAMETABLE_ATTR_START = 0x23C0;
 
         public const ushort PALETTE_START = 0x3F00;
+
         public Ppu(Bus b)
         {
             _b = b;
@@ -300,15 +301,15 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetBackgroundPixel(int x, int y)
         {
-            // screen coordinates and world coordinates are different because the background can be scrolled. The scroll values are set by the CPU through PPUSCROLL.
+            byte colorIndex = GetBackgroundColorIndex(x, y);
+
+            // Palette attributes use the same scrolled background coordinate
+            // as the tile/pattern lookup.
             int scrolledX = x + ScrollX;
             int scrolledY = y + ScrollY;
-            var tilenumber = GetNametableTileNumber(scrolledX, scrolledY);
-            int tileX = scrolledX % 8;
-            int tileY = scrolledY % 8;
-            var idx = GetTilePixelColorIndex(tilenumber, tileX, tileY);
-            var palette = GetBackgroundPaletteNumber(scrolledX, scrolledY);
-            return GetBackgroundPaletteValue(palette, idx);
+            byte palette = GetBackgroundPaletteNumber(scrolledX, scrolledY);
+
+            return GetBackgroundPaletteValue(palette, colorIndex);
         }
 
         /// <summary>
@@ -328,6 +329,73 @@ namespace FamiMan.Core
         {
             // a tile is 8x8px, and each pixel is 2 bits, so each tile takes 16 bytes in the CHR pattern table.
             return (ushort)(GetBackgroundPatternTableBase() + (tileNumber * 16));
+        }
+
+        /// <summary>
+        /// Returns the CHR pattern-table base selected for 8x8 sprites by
+        /// PPUCTRL bit 3.
+        /// </summary>
+        public ushort GetSpritePatternTableBase()
+        {
+            bool bit3IsSet = (Register.PPUCTRL & 0x08) != 0;
+            return (ushort)((bit3IsSet ? 0x1000 : 0));
+        }
+
+        /// <summary>
+        /// Returns the first CHR address belonging to an 8x8 sprite tile.
+        /// </summary>
+        public ushort GetSpriteTileAddress(byte tileNumber)
+        {
+            return (ushort)(GetSpritePatternTableBase() + (tileNumber * 16));
+        }
+
+        /// <summary>
+        /// Decodes one pixel inside an 8x8 sprite tile to color index 0-3.
+        /// The coordinates are local to the tile.
+        /// </summary>
+        public byte GetSpriteTilePixelColorIndex(byte tileNumber, int x, int y)
+        {
+            ushort tileStart = GetSpriteTileAddress(tileNumber);
+            return DecodeTilePixelColorIndex(tileStart, x, y);
+        }
+
+        /// <summary>
+        /// Returns one sprite's raw color index at a screen coordinate. Zero
+        /// means either outside the sprite rectangle or a transparent pixel.
+        /// </summary>
+        public byte GetSpritePixelColorIndex(int spriteIndex, int screenX, int screenY)
+        {
+            byte oamAddr = (byte)(spriteIndex * 4);
+            int spriteX = ReadOamByte((byte)(oamAddr + 3));
+            int spriteY = ReadOamByte(oamAddr) + 1;
+            
+            int localX = screenX - spriteX;
+            int localY = screenY - spriteY;
+
+            if (localX < 0 || localY < 0 || localX > 7 || localY > 7)
+                return 0;
+
+            byte tileNumber = ReadOamByte((byte)(oamAddr + 1));
+            return GetSpriteTilePixelColorIndex(tileNumber, localX, localY);
+        }
+
+        /// <summary>
+        /// Returns the background pattern color index before palette lookup.
+        /// Sprite-zero hit needs opacity (index 0 versus 1-3), not an RGB or
+        /// NES system-palette value.
+        /// </summary>
+        public byte GetBackgroundColorIndex(int x, int y)
+        {
+            // Screen coordinates and background coordinates differ when the
+            // CPU has written a scroll position through PPUSCROLL.
+            int scrolledX = x + ScrollX;
+            int scrolledY = y + ScrollY;
+
+            byte tileNumber = GetNametableTileNumber(scrolledX, scrolledY);
+            int tileX = scrolledX % 8;
+            int tileY = scrolledY % 8;
+
+            return GetTilePixelColorIndex(tileNumber, tileX, tileY);
         }
 
         /// <summary>
@@ -386,20 +454,25 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetTilePixelColorIndex(byte tileNumber, int x, int y)
         {
+            ushort tileStart = GetBackgroundTileAddress(tileNumber);
+            return DecodeTilePixelColorIndex(tileStart, x, y);
+        }
+
+        /// <summary>
+        /// Decodes one pixel from a tile whose CHR start address has already
+        /// been selected. Background and 8x8 sprite tiles share this format.
+        /// </summary>
+        private byte DecodeTilePixelColorIndex(ushort tileStart, int x, int y)
+        {
             if (x < 0 || x >= 8 || y < 0 || y >= 8)
             {
                 throw new InvalidOperationException("Tile pixel coordinates must be within 8x8 tile");
             }
 
-            // each index is two bits, 00 to 11, so we need to read two bytes from the CHR pattern table for this tile.
-            // each tile occupies 16 bytes, a low and high bitplane, so the low plane is at the tile's base address and the high plane is 8 bytes later.
-            // its one byte per pixel row
-            ushort tilestart = GetBackgroundTileAddress(tileNumber);
-
             // one byte is an entire row of the tile since they are 8x8px
             // add y to get the row we want, and add 8 to get the high bitplane row
-            byte lowPlaneRow = ReadPpuMemory((ushort)(tilestart + y));
-            byte highPlaneRow = ReadPpuMemory((ushort)(tilestart + 8 + y));
+            byte lowPlaneRow = ReadPpuMemory((ushort)(tileStart + y));
+            byte highPlaneRow = ReadPpuMemory((ushort)(tileStart + 8 + y));
 
             // the leftmost pixel is bit 7, so we need to shift the row right by (7 - x) to get the bit for this pixel
             int bitPosition = 7 - x;
@@ -447,6 +520,12 @@ namespace FamiMan.Core
             return ReadPpuMemory((ushort)(PALETTE_START + (paletteNumber * 4) + colorIndex));
         }
 
+        private byte GetSpritePaletteValue(byte paletteNumber, byte colorIndex)
+        {
+            if (colorIndex == 0) return 0; // color index 0 is transparent for sprites
+            return ReadPpuMemory((ushort)(PALETTE_START + 0x10 + (paletteNumber * 4) + colorIndex));
+        }
+
         /// <summary>
         /// Builds one 256x240 frame of NES palette indices. Converting those
         /// indices to host ARGB colors belongs to NesSystemPalette/the UI.
@@ -471,7 +550,27 @@ namespace FamiMan.Core
         /// </summary>
         public byte[] RenderFrame()
         {
-            throw new NotImplementedException();
+            // background pixel + sprite pixel = final pixel
+            var ret = RenderBackgroundFrame();
+
+            var sprites = new byte[256 * 240];
+            for (int y = 0; y < 240; y++)
+            {
+                for (int x = 0; x < 256; x++)
+                {
+                    for (int spriteidx = 0; spriteidx < 64; spriteidx++)
+                    {
+                        // Get color idx for any sprites on this coordinate
+                        sprites[y * 256 + x] = GetSpritePixelColorIndex(spriteidx, x, y);
+                        if (sprites[y * 256 + x] != 0) // sprite pixel is not transparent
+                        {
+                            // Get the color value for the sprite pixel and overwrite the background pixel
+                            ret[y * 256 + x] = GetSpritePaletteValue(0, sprites[y * 256 + x]);
+                        }
+                    }
+                }
+            }
+            return ret;
         }
 
         /// <summary>
@@ -501,9 +600,23 @@ namespace FamiMan.Core
                     FrameComplete = true;
                 }
             }
+            byte mask = Register.Registers[PPURegister.PPUMASK_IDX];
 
+            bool backgroundEnabled = (mask & 0x08) != 0;
+            bool spritesEnabled = (mask & 0x10) != 0;
 
-            if (Scanline == 241 && Cycle == 1)
+            if (backgroundEnabled && spritesEnabled && Scanline >= 0 && Scanline < 240 && Cycle > 0 && Cycle < 256)
+            {
+                int screenY = Scanline;
+                int screenX = Cycle - 1;
+                var bgIdx = GetBackgroundColorIndex(screenX, screenY);
+                var spriteIdx = GetSpritePixelColorIndex(0, screenX, screenY);
+                if (bgIdx != 0 && spriteIdx != 0)
+                {
+                    Register.Registers[PPURegister.PPUSTATUS_IDX] |= 0x40;
+                }
+            }
+            else if (Scanline == 241 && Cycle == 1)
             {
                 Register.PPUSTATUS |= 0x80; // Set bit 7
                 if ((Register.PPUCTRL & 0x80) != 0)
@@ -511,9 +624,11 @@ namespace FamiMan.Core
                     _b.Cpu.RequestInterrupt(InterruptType.NMI);
                 }
             }
-
-            if (Scanline == 261 && Cycle == 1)
+            else if (Scanline == 261 && Cycle == 1)
+            {
                 Register.PPUSTATUS &= 0x7F; // Clear bit 7
+                Register.PPUSTATUS &= 0x1F; // Clear hit flag bit
+            }
         }
     }
 
