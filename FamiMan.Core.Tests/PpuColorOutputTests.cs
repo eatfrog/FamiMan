@@ -26,7 +26,7 @@ namespace FamiMan.Core.Tests
             var bus = CreateBusWithChr();
             bus.Ppu.WritePpuMemory(Ppu.NAMETABLE_ATTR_START, attribute);
 
-            Assert.Equal(expectedPalette, bus.Ppu.GetBackgroundPaletteNumber(x, y));
+            Assert.Equal(expectedPalette, bus.Ppu.GetBackgroundPaletteNumber(x, y, 0));
         }
 
         [Fact]
@@ -45,6 +45,8 @@ namespace FamiMan.Core.Tests
         public void BackgroundFrameContainsOnePaletteIndexPerNesPixel()
         {
             var bus = CreateBusWithChr();
+            // Enable background rendering, including columns 0-7 where this test samples X=0.
+            bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x0A);
 
             // tile 1 is at the start of the nametable
             // so 0,0 comes from tile 1

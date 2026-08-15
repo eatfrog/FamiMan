@@ -1,5 +1,6 @@
 ﻿using FamiMan.Core.Interfaces;
 using System;
+using System.Xml.Linq;
 
 namespace FamiMan.Core
 {
@@ -366,7 +367,8 @@ namespace FamiMan.Core
                         : (X: ScrollX, Y: ScrollY, PPUCTRL: Register.Registers[PPURegister.PPUCTRL_IDX]);
             int scrolledX = x + scroll.X;
             int scrolledY = y + scroll.Y;
-            byte palette = GetBackgroundPaletteNumber(scrolledX, scrolledY);
+            int baseTable = _scanlineCaptured[y] ? _bgNametableAtScanline[y] : _backgroundNametable;
+            byte palette = GetBackgroundPaletteNumber(scrolledX, scrolledY, baseTable);
 
             return GetBackgroundPaletteValue(palette, colorIndex);
         }
@@ -464,19 +466,23 @@ namespace FamiMan.Core
             int scrolledX = x + scroll.X;
             int scrolledY = y + scroll.Y;
 
-            byte tileNumber = GetNametableTileNumber(scrolledX, scrolledY);
+            int baseTable = _scanlineCaptured[y] ? _bgNametableAtScanline[y] : _backgroundNametable;
+
+            byte tileNumber = GetNametableTileNumber(scrolledX, scrolledY, baseTable);
             int tileX = scrolledX % 8;
             int tileY = scrolledY % 8;
 
             return GetTilePixelColorIndex(tileNumber, tileX, tileY);
         }
 
+        public byte GetNametableTileNumber(int x, int y) => GetNametableTileNumber(x, y, _backgroundNametable);
+
         /// <summary>
         /// Returns the tile number selected by the nametable for a screen pixel.
         /// </summary>
-        public byte GetNametableTileNumber(int x, int y)
+        public byte GetNametableTileNumber(int x, int y, int baseTable)
         {
-            int selectedTable = GetNametableIdx(x, y);
+            int selectedTable = GetNametableIdx(x, y, baseTable);
             int baseAddr = selectedTable * 0x400;
 
             // where in the actual nametable are we? 0-255, 0-239 since each nametable is 256x240px
@@ -493,7 +499,7 @@ namespace FamiMan.Core
             return ReadPpuMemory((ushort)(NAMETABLE_START + baseAddr + (tileRow * 32) + tileColumn));
         }
 
-        private int GetNametableIdx(int x, int y)
+        private int GetNametableIdx(int x, int y, int baseTable)
         {
             // PPUCTRL bit 0 and 1 select which nametable starts at top left
             /*
@@ -503,8 +509,6 @@ namespace FamiMan.Core
                 10	        $2800
                 11	        $2C00
             */
-
-            int baseTable = _scanlineCaptured[y] ? _bgNametableAtScanline[y] : _backgroundNametable;
             
             // Convert table number 0–3 into a row and column.
             // The four nametables represent a 2x2 grid, so we can use modulo and division to get the row and column.
@@ -566,9 +570,9 @@ namespace FamiMan.Core
         /// <summary>
         /// Returns the background palette number selected by the attribute table.
         /// </summary>
-        public byte GetBackgroundPaletteNumber(int x, int y)
+        public byte GetBackgroundPaletteNumber(int x, int y, int baseTable)
         {
-            var currentNametableIdx = GetNametableIdx(x, y);
+            var currentNametableIdx = GetNametableIdx(x, y, baseTable);
             var (localX, localY) = (x % 256, y % 240);
             // each attribute background tile is 32x32px
             // divided into four 16x16px quadrants
@@ -619,7 +623,18 @@ namespace FamiMan.Core
             {
                 for (int x = 0; x < 256; x++)
                 {
-                    ret[y * 256 + x] = GetBackgroundPixel(x, y);
+                    bool backgroundEnabled = (Register.PPUMASK & 0x08) != 0;
+
+                    // Columns 0-7 should use whatever is in 3F00 instead of the normal background tile. This is controlled by bit 1 of PPUMASK.
+                    bool backgroundVisibleAtLeftEdge = (Register.PPUMASK & 0x02) != 0;
+                    bool backgroundHidden =
+                        !backgroundEnabled ||
+                        (x < 8 && !backgroundVisibleAtLeftEdge);
+
+                    if (backgroundHidden)
+                        ret[y * 256 + x] = ReadPpuMemory(0x3f00); // universal background color
+                    else
+                        ret[y * 256 + x] = GetBackgroundPixel(x, y);
                 }
             }
             return ret;
@@ -637,8 +652,20 @@ namespace FamiMan.Core
             var sprites = new byte[256 * 240];
             for (int y = 0; y < 240; y++)
             {
+                bool spritesVisibleAtLeftEdge = (Register.PPUMASK & 0x04) != 0;
+                bool spritesEnabled = (Register.PPUMASK & 0x10) != 0;
+
                 for (int x = 0; x < 256; x++)
                 {
+                    if (!spritesEnabled)
+                    {
+                        continue;
+                    }
+                    if (!spritesVisibleAtLeftEdge && x < 8)
+                    {
+                        continue;
+                    }
+
                     bool found = false;
                     for (int spriteidx = 0; spriteidx < 64 && !found; spriteidx++)
                     {
@@ -649,6 +676,13 @@ namespace FamiMan.Core
                             // Get the color value for the sprite pixel and overwrite the background pixel
                             byte attrs = ReadOamByte((byte)((spriteidx * 4) + 2));
                             var paletteNumber = (byte)(attrs & 0x03);
+                            bool behindBackground = (attrs & 0x20) != 0;
+                            if (behindBackground && ret[y * 256 + x] != 0)
+                            {
+                                // sprite is behind background and background pixel is not transparent, so keep the background pixel
+                                continue;
+                            }
+
                             ret[y * 256 + x] = GetSpritePaletteValue(paletteNumber, sprites[y * 256 + x]);
                             found = true;
                         }

@@ -1,130 +1,49 @@
-﻿using System;
-using System.Net.Http.Headers;
+using System;
 
-namespace FamiMan.Core
+namespace FamiMan.Core;
+
+/// <summary>
+/// Emulates the NES audio processing unit. The implementation is intentionally
+/// left empty for now so its behavior can be added through focused tests.
+/// </summary>
+public class Apu
 {
+    protected readonly Bus Bus;
 
-    // Audio processing unit
-    public class Apu
+    public Apu(Bus bus)
     {
-        private Bus _b;
-        private Ram _r;
-        public Apu(Bus b)
-        {
-            _b = b;
-            _r = new Ram(16 * 1024);
-            Registers = new APURegister();
-            /* The PPU addresses a 16kB space, $0000-3FFF, 
-             * completely separate from the CPU's address bus. 
-             * It is either directly accessed by the PPU itself, 
-             * or via the CPU with memory mapped registers at $2006 and $2007.
-             * The NES has 2kB of RAM dedicated to the PPU, 
-             * normally mapped to the nametable address space from $2000-2FFF, 
-             * but this can be rerouted through custom cartridge wiring. */
-        }
-
-        /*
-         * $4000–$4003	Pulse 1	Timer, length counter, envelope, sweep
-         * $4004–$4007	Pulse 2	Timer, length counter, envelope, sweep
-         * $4008–$400B	Triangle	Timer, length counter, linear counter
-         * $400C–$400F	Noise	Timer, length counter, envelope, linear feedback shift register
-         * $4010–$4013	DMC	Timer, memory reader, sample buffer, output unit
-         * $4015	    All	Channel enable and length counter status
-         * $4017	    All	Frame counter
-        */
-        public APURegister Registers;
+        Bus = bus;
     }
 
-    public class APURegister
+    /// <summary>
+    /// Handles a CPU write to an APU register in $4000-$4013, $4015, or $4017.
+    /// </summary>
+    public virtual void WriteRegister(ushort address, byte value)
     {
-        public APURegister()
-        {
-            _registers = new byte[19];
-        }
+        throw new NotImplementedException();
+    }
 
-        private byte[] _registers { get; set; }
-        public byte[] Pulse1Channel
-        {
-            set
-            {
-                _registers[0] = value[0]; // $4000
-                _registers[1] = value[1]; // $4001
-                _registers[2] = value[2]; // $4002
-                _registers[3] = value[3]; // $4003
-            }
-        }
+    /// <summary>
+    /// Reads APU channel and interrupt status as exposed through $4015.
+    /// </summary>
+    public virtual byte ReadStatus()
+    {
+        throw new NotImplementedException();
+    }
 
-        public byte[] Pulse2Channel
-        {
-            set
-            {
-                _registers[4] = value[0]; // $4004
-                _registers[5] = value[1]; // $4005
-                _registers[6] = value[2]; // $4006
-                _registers[7] = value[3]; // $4007
-            }
-        }
+    /// <summary>
+    /// Advances the APU by one CPU clock.
+    /// </summary>
+    public virtual void Tick()
+    {
+        throw new NotImplementedException();
+    }
 
-        public byte[] TriangleChannel
-        {
-            set
-            {
-                _registers[8]  = value[0]; // $4008
-                // No $4009
-                _registers[9] = value[1]; // $400A
-                _registers[10] = value[2]; // $400B
-            }
-        }
-
-        public byte[] NoiseChannel
-        {
-            set
-            {
-                _registers[11] = value[0]; // $400C
-                // No $400D
-                _registers[12] = value[1]; // $400E
-                _registers[13] = value[2]; // $400F
-            }
-        }
-
-        public byte[] DmcChannel
-        {
-            set
-            {
-                _registers[14] = value[0]; // $4010
-                _registers[15] = value[1]; // $4011
-                _registers[16] = value[2]; // $4012
-                _registers[17] = value[3]; // $4013
-            }
-        }
-
-        public byte DmcStatus // AKA SND_CHN
-        {
-            /* $4015	---D NT21	Control: DMC enable, length counter enables: noise, triangle, pulse 2, pulse 1 (write)
-               $4015	IF-D NT21	Status: DMC interrupt, frame interrupt, length counter status: noise, triangle, pulse 2, pulse 1 (read)
-             */
-            get => _registers[18]; set => _registers[18] = value;
-        }
-
-        public byte FrameCounter
-        {
-            get => _registers[19]; set => _registers[19] = value;
-        }
-
-
-        // Should probably rewrite to READ/WRITE methods instead
-        public ref byte this[ushort index]
-        {
-            get
-            {
-                if (index >= 0x2000 && index < 0x2013)
-                    return ref _registers[index - 0x2000];
-                else if (index >= 0x4000 && index < 0x4013)
-                    return ref _registers[index - 0x4000];
-                else if (index == 0x2015 || index == 0x4015)
-                    return ref _registers[18];
-                else throw new InvalidOperationException("Memory access violation");
-            }
-        }
+    /// <summary>
+    /// Returns audio samples generated since the previous call.
+    /// </summary>
+    public virtual float[] TakePendingSamples()
+    {
+        throw new NotImplementedException();
     }
 }

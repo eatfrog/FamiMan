@@ -104,7 +104,8 @@ public class PpuScrollingTests
     public void ScrollChangeDuringFrameOnlyAffectsFollowingScanlines()
     {
         var bus = CreateBusWithChr();
-        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x08); // Show background.
+        // Show the background, including columns 0-7 where these assertions sample X=0.
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x0A);
 
         bus.Ppu.WritePpuMemory(0x2000, 0x01); // Tile visible before scrolling.
         bus.Ppu.WritePpuMemory(0x2001, 0x02); // Tile visible after scrolling 8px.
@@ -137,6 +138,8 @@ public class PpuScrollingTests
     {
         var bus = CreateBusWithChr();
         bus.Ppu.Mirroring = NametableMirroring.Vertical;
+        // Show the background, including columns 0-7 where these assertions sample X=0.
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x0A);
 
         // Vertical mirroring keeps logical nametables 0 and 1 in distinct RAM.
         // Their top-left entries select tiles with different color indices.

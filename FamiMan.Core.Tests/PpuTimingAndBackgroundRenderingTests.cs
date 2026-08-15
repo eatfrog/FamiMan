@@ -133,7 +133,7 @@ namespace FamiMan.Core.Tests
             // 32 tile numbers per row, so this entry is $2000 + (2 * 32) + 1.
             bus.Ppu.WritePpuMemory(0x2041, 0x2A);
 
-            Assert.Equal(0x2A, bus.Ppu.GetNametableTileNumber(8, 16));
+            Assert.Equal(0x2A, bus.Ppu.GetNametableTileNumber(8, 16, 0));
         }
 
         [Fact]
@@ -186,7 +186,7 @@ namespace FamiMan.Core.Tests
             // the palette used by the top-left 2x2-tile quadrant.
             bus.Ppu.WritePpuMemory(Ppu.NAMETABLE_ATTR_START, 0b0000_0010);
 
-            Assert.Equal(2, bus.Ppu.GetBackgroundPaletteNumber(0, 0));
+            Assert.Equal(2, bus.Ppu.GetBackgroundPaletteNumber(0, 0, 0));
         }
 
         [Fact]

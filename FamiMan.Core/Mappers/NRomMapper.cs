@@ -23,8 +23,6 @@ namespace FamiMan.Core.Mappers
 
         private IO IO => _b.IO;
 
-        private Apu APU => _b.Apu;
-        
         private Ram _sram;
         public NRomMapper (Bus b)
         {
@@ -59,7 +57,7 @@ namespace FamiMan.Core.Mappers
             else if (index == 0x4014)
                 return PPU.Register.Registers[8];
             else if (index >= 0x4000 && index <= 0x4013)
-                return APU.Registers[index];
+                return 0; // APU write-only registers are handled by the CPU bus.
             else if (index >= 0x6000 && index <= 0x7FFF)
                 return _sram.AsSpan()[index - 0x6000];
             else if (index >= 0x8000 && index <= 0xFFFF)
