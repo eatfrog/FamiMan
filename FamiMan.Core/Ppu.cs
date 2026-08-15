@@ -425,13 +425,12 @@ namespace FamiMan.Core
         public byte GetSpritePixelColorIndex(int spriteIndex, int screenX, int screenY)
         {
             byte oamAddr = (byte)(spriteIndex * 4);
-            byte[] oamBytes = ReadOamBytes(oamAddr, oamAddr + 4);
-            int spriteX = oamBytes[3];
-            int spriteY = oamBytes[0] + 1;
+            int spriteX = _oam[oamAddr + 3];
+            int spriteY = _oam[oamAddr] + 1;
             int localX = screenX - spriteX;
             int localY = screenY - spriteY;
 
-            byte attributes = oamBytes[2];
+            byte attributes = _oam[oamAddr + 2];
             bool horizontallyFlipped = (attributes & 0x40) != 0;
             if (horizontallyFlipped)
                 localX = 7 - localX;
@@ -445,7 +444,7 @@ namespace FamiMan.Core
             if (localX < 0 || localY < 0 || localX > 7 || localY > 7)
                 return 0;
 
-            byte tileNumber = oamBytes[1];
+            byte tileNumber = _oam[oamAddr + 1];
             return GetSpriteTilePixelColorIndex(tileNumber, localX, localY);
         }
 
