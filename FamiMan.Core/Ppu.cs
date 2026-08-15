@@ -73,7 +73,7 @@ namespace FamiMan.Core
         public byte ScrollY { get; private set; }
 
         private (byte X, byte Y, byte PPUCTRL)[] _scanlineScrolls = new (byte X, byte Y, byte PPUCTRL)[240];
-        private bool[] _scanlineScrollCaptured = new bool[240];
+        private bool[] _scanlineCaptured = new bool[240];
         private int[] _bgNametableAtScanline = new int[240];
 
         /// <summary>
@@ -85,7 +85,7 @@ namespace FamiMan.Core
             if (scanline < 0 || scanline >= 240)
                 throw new ArgumentOutOfRangeException(nameof(scanline));
 
-            if (_scanlineScrollCaptured[scanline])
+            if (_scanlineCaptured[scanline])
             {
                 var captured = _scanlineScrolls[scanline];
                 return (captured.X, captured.Y, captured.PPUCTRL, true);
@@ -361,7 +361,7 @@ namespace FamiMan.Core
 
             // Palette attributes use the same scrolled background coordinate
             // as the tile/pattern lookup.
-            var scroll = _scanlineScrollCaptured[y]
+            var scroll = _scanlineCaptured[y]
                         ? _scanlineScrolls[y]
                         : (X: ScrollX, Y: ScrollY, PPUCTRL: Register.Registers[PPURegister.PPUCTRL_IDX]);
             int scrolledX = x + scroll.X;
@@ -428,9 +428,19 @@ namespace FamiMan.Core
             byte[] oamBytes = ReadOamBytes(oamAddr, oamAddr + 4);
             int spriteX = oamBytes[3];
             int spriteY = oamBytes[0] + 1;
-
             int localX = screenX - spriteX;
             int localY = screenY - spriteY;
+
+            byte attributes = oamBytes[2];
+            bool horizontallyFlipped = (attributes & 0x40) != 0;
+            if (horizontallyFlipped)
+                localX = 7 - localX;
+
+            bool verticallyFlipped = (attributes & 0x80) != 0;
+            if (verticallyFlipped)
+            {
+                localY = 7 - localY;
+            }
 
             if (localX < 0 || localY < 0 || localX > 7 || localY > 7)
                 return 0;
@@ -448,7 +458,7 @@ namespace FamiMan.Core
         {
             // Screen coordinates and background coordinates differ when the
             // CPU has written a scroll position through PPUSCROLL.
-            var scroll = _scanlineScrollCaptured[y]
+            var scroll = _scanlineCaptured[y]
                         ? _scanlineScrolls[y]
                         : (X: ScrollX, Y: ScrollY, Register.PPUCTRL);
 
@@ -495,7 +505,7 @@ namespace FamiMan.Core
                 11	        $2C00
             */
 
-            int baseTable = _bgNametableAtScanline[y];
+            int baseTable = _scanlineCaptured[y] ? _bgNametableAtScanline[y] : _backgroundNametable;
             
             // Convert table number 0–3 into a row and column.
             // The four nametables represent a 2x2 grid, so we can use modulo and division to get the row and column.
@@ -682,7 +692,7 @@ namespace FamiMan.Core
             {
                 _bgNametableAtScanline[Scanline] = _backgroundNametable;
                 _scanlineScrolls[Scanline] = (ScrollX, ScrollY, Register.Registers[PPURegister.PPUCTRL_IDX]);
-                _scanlineScrollCaptured[Scanline] = true;
+                _scanlineCaptured[Scanline] = true;
             }
 
             byte mask = Register.Registers[PPURegister.PPUMASK_IDX];
