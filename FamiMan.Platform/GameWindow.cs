@@ -76,6 +76,9 @@ public sealed unsafe class GameWindow : IDisposable
     public void DrawText(string text, int x, int y, Color color)
     {
         ThrowIfDisposed();
+        if (string.IsNullOrEmpty(text))
+            return;
+
         if (_font == IntPtr.Zero)
             throw new InvalidOperationException("This window was created without a font.");
 

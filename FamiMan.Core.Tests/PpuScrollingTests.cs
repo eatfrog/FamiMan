@@ -132,6 +132,94 @@ public class PpuScrollingTests
         Assert.Equal(0x22, frame[1 * 256]);
     }
 
+    [Fact]
+    public void NametableChangeDuringFrameOnlyAffectsFollowingScanlines()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.Mirroring = NametableMirroring.Vertical;
+
+        // Vertical mirroring keeps logical nametables 0 and 1 in distinct RAM.
+        // Their top-left entries select tiles with different color indices.
+        bus.Ppu.WritePpuMemory(0x2000, 0x01); // Nametable 0 uses tile 1.
+        bus.Ppu.WritePpuMemory(0x2400, 0x02); // Nametable 1 uses tile 2.
+
+        // Tile 1 produces color index 1 and tile 2 produces color index 2 on
+        // every row, so scanline Y does not affect which color is expected.
+        for (int row = 0; row < 8; row++)
+        {
+            bus.Ppu.WritePpuMemory((ushort)(0x0010 + row), 0xFF);
+            bus.Ppu.WritePpuMemory((ushort)(0x0028 + row), 0xFF);
+        }
+        bus.Ppu.WritePpuMemory(0x3F01, 0x11); // Color index 1.
+        bus.Ppu.WritePpuMemory(0x3F02, 0x22); // Color index 2.
+
+        // Scanline 0 begins while nametable 0 is active.
+        bus.Ppu.WriteCpuRegister(Ppu.PPUCTRL_ADDR, 0x00);
+        for (int i = 0; i < 341; i++)
+            bus.Ppu.Tick();
+
+        // Switch to nametable 1 before scanline 1 begins and captures its
+        // background state. This must not retroactively alter scanline 0.
+        bus.Ppu.WriteCpuRegister(Ppu.PPUCTRL_ADDR, 0x01);
+        bus.Ppu.Tick();
+
+        byte[] frame = bus.Ppu.RenderBackgroundFrame();
+
+        Assert.Equal(0x11, frame[0 * 256]);
+        Assert.Equal(0x22, frame[1 * 256]);
+    }
+
+    [Fact]
+    public void SecondPpuAddrWriteChangesBackgroundCoarseXOrigin()
+    {
+        var bus = CreateBusWithChr();
+
+        // With coarse X=0, screen X=8 reads nametable column 1 and tile 1.
+        bus.Ppu.WritePpuMemory(0x2001, 0x01);
+
+        // $2000 also produces fine Y=2 when interpreted as the PPU's active
+        // rendering address. Make every row opaque so this test isolates only
+        // the horizontal/coarse-X part of that address.
+        for (int row = 0; row < 8; row++)
+            bus.Ppu.WritePpuMemory((ushort)(0x0010 + row), 0b1000_0000);
+
+        // Model the previous playfield state as one tile of horizontal scroll.
+        bus.Ppu.WriteCpuRegister(Ppu.PPUSCROLL_ADDR, 8);
+        bus.Ppu.WriteCpuRegister(Ppu.PPUSCROLL_ADDR, 0);
+
+        // The second PPUADDR write copies $2000 into the active VRAM address.
+        // Its coarse-X field is zero, so rendering should no longer use the
+        // previous one-tile horizontal offset.
+        bus.Ppu.WriteCpuRegister(Ppu.PPUADDR_ADDR, 0x20);
+        bus.Ppu.WriteCpuRegister(Ppu.PPUADDR_ADDR, 0x00);
+
+        Assert.Equal(1, bus.Ppu.GetBackgroundColorIndex(8, 0));
+    }
+
+    [Fact]
+    public void SecondPpuAddrWriteChangesBackgroundNametableOrigin()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.Mirroring = NametableMirroring.Vertical;
+
+        // PPUCTRL currently selects logical nametable 1 ($2400).
+        bus.Ppu.WriteCpuRegister(Ppu.PPUCTRL_ADDR, 0x01);
+
+        // Only logical nametable 0 ($2000) contains opaque background tile 1.
+        // Nametable 1 remains transparent, making the selected origin visible.
+        bus.Ppu.WritePpuMemory(0x2000, 0x01);
+        for (int row = 0; row < 8; row++)
+            bus.Ppu.WritePpuMemory((ushort)(0x0010 + row), 0b1000_0000);
+
+        // A complete PPUADDR write copies $2000 into V. Its nametable field is
+        // zero, so background lookup should now begin in logical nametable 0
+        // even though the stored PPUCTRL value still has nametable bits 01.
+        bus.Ppu.WriteCpuRegister(Ppu.PPUADDR_ADDR, 0x20);
+        bus.Ppu.WriteCpuRegister(Ppu.PPUADDR_ADDR, 0x00);
+
+        Assert.Equal(1, bus.Ppu.GetBackgroundColorIndex(0, 0));
+    }
+
     private static void MakeTileTopLeftPixelColorOne(Ppu ppu, byte tile)
     {
         ppu.WritePpuMemory((ushort)(tile * 16), 0b1000_0000);

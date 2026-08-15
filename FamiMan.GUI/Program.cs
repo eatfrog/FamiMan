@@ -1,12 +1,16 @@
 using FamiMan.Core;
 using FamiMan.GUI.UI;
 using FamiMan.Platform;
+using System.Diagnostics;
 
 internal class Program
 {
     private const int NesWidth = 256;
     private const int NesHeight = 240;
     private const int MaximumCpuClocksPerFrame = 100_000;
+    private const double NtscFramesPerSecond = 60.0988;
+    private static readonly TimeSpan TargetFrameDuration =
+        TimeSpan.FromSeconds(1.0 / NtscFramesPerSecond);
 
     private static void Main(string[] args)
     {
@@ -20,9 +24,12 @@ internal class Program
         uint[] framebuffer = new uint[NesWidth * NesHeight];
         bool quit = false;
         bool emulationHalted = false;
+        var frameTimer = new Stopwatch();
 
         while (!quit)
         {
+            frameTimer.Restart();
+
             if (!emulationHalted)
             {
                 try
@@ -66,7 +73,7 @@ internal class Program
             debugOverlay.Render(window, bus, cpu);
             window.Present();
             debugOverlay.FramePresented();
-            Thread.Sleep(16);
+            WaitForRemainingFrameTime(frameTimer);
         }
     }
 
@@ -114,6 +121,16 @@ internal class Program
 
         for (int i = 0; i < paletteIndices.Length; i++)
             destination[i] = NesSystemPalette.ToArgb(paletteIndices[i]);
+    }
+
+    private static void WaitForRemainingFrameTime(Stopwatch frameTimer)
+    {
+        TimeSpan remaining = TargetFrameDuration - frameTimer.Elapsed;
+
+        // If emulation and rendering already took a full frame (common in a
+        // Debug build), sleeping would only make the emulator even slower.
+        if (remaining > TimeSpan.Zero)
+            Thread.Sleep(remaining);
     }
 
     private static void SetControllerButton(

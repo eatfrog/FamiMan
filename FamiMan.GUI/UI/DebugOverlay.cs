@@ -141,6 +141,71 @@ namespace FamiMan.GUI.UI
             WriteRow(window, "Last debug: " + _debugText, 9);
             WriteRow(window, "Wait: " + _waitTime, 10);
             WriteRow(window, $"FPS: {_framesPerSecond:F1}", 11);
+
+            string[] spriteZeroLines = BuildSpriteZeroDebug(bus.Ppu);
+            for (int i = 0; i < spriteZeroLines.Length; i++)
+                WriteRow(window, spriteZeroLines[i], 13 + i);
+        }
+
+        private static string[] BuildSpriteZeroDebug(Ppu ppu)
+        {
+            byte storedY = ppu.ReadOamByte(0);
+            byte tile = ppu.ReadOamByte(1);
+            byte attributes = ppu.ReadOamByte(2);
+            byte spriteX = ppu.ReadOamByte(3);
+            int spriteY = storedY + 1;
+
+            byte ppuCtrl = ppu.Register.Registers[PPURegister.PPUCTRL_IDX];
+            byte ppuMask = ppu.Register.Registers[PPURegister.PPUMASK_IDX];
+            byte ppuStatus = ppu.Register.Registers[PPURegister.PPUSTATUS_IDX];
+
+            var lines = new List<string>
+            {
+                "--- SPRITE ZERO ---",
+                $"PPU C:{ppuCtrl:X2} M:{ppuMask:X2} S:{ppuStatus:X2}",
+                $"OAM Y:{storedY:X2} T:{tile:X2} A:{attributes:X2} X:{spriteX:X2}",
+                $"Screen X:{spriteX} Y:{spriteY}"
+            };
+
+            for (int localY = 0; localY < 8; localY++)
+            {
+                int screenY = spriteY + localY;
+                if (screenY is < 0 or >= 240)
+                {
+                    lines.Add($"r{localY}: outside screen");
+                    continue;
+                }
+
+                var scroll = ppu.GetScrollStateForScanline(screenY);
+                var background = new char[8];
+                var sprite = new char[8];
+                var overlap = new char[8];
+
+                for (int localX = 0; localX < 8; localX++)
+                {
+                    int screenX = spriteX + localX;
+                    if (screenX >= 256)
+                    {
+                        background[localX] = '-';
+                        sprite[localX] = '-';
+                        overlap[localX] = '-';
+                        continue;
+                    }
+
+                    byte backgroundIndex = ppu.GetBackgroundColorIndex(screenX, screenY);
+                    byte spriteIndex = ppu.GetSpritePixelColorIndex(0, screenX, screenY);
+                    background[localX] = (char)('0' + backgroundIndex);
+                    sprite[localX] = (char)('0' + spriteIndex);
+                    overlap[localX] = backgroundIndex != 0 && spriteIndex != 0 ? '*' : '.';
+                }
+
+                string captureMarker = scroll.Captured ? "" : "?";
+                lines.Add(
+                    $"r{localY} {scroll.X:X2},{scroll.Y:X2}{captureMarker} " +
+                    $"B:{new string(background)} S:{new string(sprite)} H:{new string(overlap)}");
+            }
+
+            return lines.ToArray();
         }
 
         private static void WriteRow(GameWindow window, string text, int row) =>

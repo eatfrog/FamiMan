@@ -1,8 +1,5 @@
 ﻿using FamiMan.Core.Interfaces;
 using System;
-using System.Net;
-using System.Net.Http.Headers;
-using System.Net.NetworkInformation;
 
 namespace FamiMan.Core
 {
@@ -70,10 +67,32 @@ namespace FamiMan.Core
         public int Scanline { get; private set; }
         public bool FrameComplete { get; private set; }
         public byte ScrollX { get; private set; }
+
+        private byte _fineX;
+
         public byte ScrollY { get; private set; }
 
-        private (byte X, byte Y)[] _scanlineScrolls = new (byte X, byte Y)[240];
+        private (byte X, byte Y, byte PPUCTRL)[] _scanlineScrolls = new (byte X, byte Y, byte PPUCTRL)[240];
         private bool[] _scanlineScrollCaptured = new bool[240];
+        private int[] _bgNametableAtScanline = new int[240];
+
+        /// <summary>
+        /// Returns the background state used for one visible scanline. This is
+        /// intended for tests and debug tooling; reading it has no PPU side effects.
+        /// </summary>
+        public (byte X, byte Y, byte PpuCtrl, bool Captured) GetScrollStateForScanline(int scanline)
+        {
+            if (scanline < 0 || scanline >= 240)
+                throw new ArgumentOutOfRangeException(nameof(scanline));
+
+            if (_scanlineScrollCaptured[scanline])
+            {
+                var captured = _scanlineScrolls[scanline];
+                return (captured.X, captured.Y, captured.PPUCTRL, true);
+            }
+
+            return (ScrollX, ScrollY, Register.PPUCTRL, false);
+        }
 
         /// <summary>
         /// Initializes one byte of sprite OAM independently of the CPU-visible
@@ -88,6 +107,8 @@ namespace FamiMan.Core
         {
             return _oam[address];
         }
+
+        public byte[] ReadOamBytes(int from, int to) => _oam[from..to];
 
         /// <summary>
         /// Reads the PPU's separate $0000-$3FFF address space.
@@ -207,14 +228,14 @@ namespace FamiMan.Core
             else if (address == PPUDATA_ADDR)
             {
                 byte result;
-                if (_ppuAddress <= 0x3EFF)
+                if (_ppuAddressV <= 0x3EFF)
                 {
                      result = _ppuDataReadBuffer;
-                    _ppuDataReadBuffer = ReadPpuMemory(_ppuAddress);
+                    _ppuDataReadBuffer = ReadPpuMemory(_ppuAddressV);
                 }
                 else
                 {
-                    result = ReadPpuMemory(_ppuAddress);
+                    result = ReadPpuMemory(_ppuAddressV);
                 }
                 IncrementPpuAddress();
                 return result;
@@ -225,8 +246,12 @@ namespace FamiMan.Core
             }
         }
 
-        ushort _ppuAddress;
+        ushort _ppuAddressV; // actual currently request PPU address
+        ushort _ppuAddressT; // temporary while being written to
+
         bool _expectingFirstWrite = true;
+        private int _backgroundNametable; // Current bg nametable idx
+        
 
         public void WriteCpuRegister(ushort index, byte value)
         {
@@ -237,6 +262,7 @@ namespace FamiMan.Core
             else if (index == PPUCTRL_ADDR)
             {
                 Register.Registers[PPURegister.PPUCTRL_IDX] = value;
+                _backgroundNametable = value & 0x03;
             }
             else if (index == PPUMASK_ADDR)
             {
@@ -250,7 +276,18 @@ namespace FamiMan.Core
             else if (index == PPUSCROLL_ADDR)
             {
                 if (_expectingFirstWrite)
+                {
                     ScrollX = value;
+
+                    // Bottom three bits select pixel 0-7 within the tile.
+                    _fineX = (byte)(value & 0x07);
+
+                    // Remaining five bits select tile column 0-31.
+                    int coarseX = value >> 3;
+
+                    // Replace only T's coarse-X bits 0–4.
+                    _ppuAddressT = (ushort)((_ppuAddressT & ~0x001F) | coarseX);
+                }
                 else
                     ScrollY = value;
 
@@ -262,7 +299,7 @@ namespace FamiMan.Core
             }
             else if (index == PPUDATA_ADDR)
             {
-                WritePpuMemory(_ppuAddress, value);
+                WritePpuMemory(_ppuAddressV, value);
                 IncrementPpuAddress();
 
             }
@@ -277,9 +314,9 @@ namespace FamiMan.Core
         private void IncrementPpuAddress()
         {
             if ((Register.PPUCTRL & 0x04) != 0)
-                _ppuAddress += 32;  // Write down column
+                _ppuAddressV += 32;  // Write down column
             else
-                _ppuAddress++;      // Write across row
+                _ppuAddressV++;      // Write across row
         }
 
         private void WritePpuAddress(byte value)
@@ -288,13 +325,24 @@ namespace FamiMan.Core
             {
                 // Only six address bits are meaningful because PPU addresses are 14-bit.
                 // We got high bytes so move the value into the high byte of the 16-bit address and clear the low byte.
-                _ppuAddress = (ushort)((value & 0x3F) << 8);
+                _ppuAddressT = (ushort)((value & 0x3F) << 8);
                 _expectingFirstWrite = false;
             }
             else
             {
                 // Bitwise OR to combine the high byte we already have with the low byte we just got.
-                _ppuAddress |= value;
+                _ppuAddressT |= value;
+
+                _ppuAddressV = _ppuAddressT;
+
+                int coarseX = _ppuAddressV & 0x001F;
+
+                // Convert the tile column back into a pixel position.
+                // Preserve fine X from the earlier PPUSCROLL write.
+                ScrollX = (byte)((coarseX << 3) | _fineX);
+
+                _backgroundNametable = (_ppuAddressV >> 10) & 0x03;
+
                 _expectingFirstWrite = true;
             }
         }
@@ -306,11 +354,16 @@ namespace FamiMan.Core
         {
             byte colorIndex = GetBackgroundColorIndex(x, y);
 
+            int coarseX = _ppuAddressV & 0x001F;
+            int coarseY = (_ppuAddressV >> 5) & 0x001F;
+            int nametable = (_ppuAddressV >> 10) & 0x03;
+            int fineY = (_ppuAddressV >> 12) & 0x07;
+
             // Palette attributes use the same scrolled background coordinate
             // as the tile/pattern lookup.
             var scroll = _scanlineScrollCaptured[y]
                         ? _scanlineScrolls[y]
-                        : (X: ScrollX, Y: ScrollY);
+                        : (X: ScrollX, Y: ScrollY, PPUCTRL: Register.Registers[PPURegister.PPUCTRL_IDX]);
             int scrolledX = x + scroll.X;
             int scrolledY = y + scroll.Y;
             byte palette = GetBackgroundPaletteNumber(scrolledX, scrolledY);
@@ -372,16 +425,17 @@ namespace FamiMan.Core
         public byte GetSpritePixelColorIndex(int spriteIndex, int screenX, int screenY)
         {
             byte oamAddr = (byte)(spriteIndex * 4);
-            int spriteX = ReadOamByte((byte)(oamAddr + 3));
-            int spriteY = ReadOamByte(oamAddr) + 1;
-            
+            byte[] oamBytes = ReadOamBytes(oamAddr, oamAddr + 4);
+            int spriteX = oamBytes[3];
+            int spriteY = oamBytes[0] + 1;
+
             int localX = screenX - spriteX;
             int localY = screenY - spriteY;
 
             if (localX < 0 || localY < 0 || localX > 7 || localY > 7)
                 return 0;
 
-            byte tileNumber = ReadOamByte((byte)(oamAddr + 1));
+            byte tileNumber = oamBytes[1];
             return GetSpriteTilePixelColorIndex(tileNumber, localX, localY);
         }
 
@@ -396,7 +450,8 @@ namespace FamiMan.Core
             // CPU has written a scroll position through PPUSCROLL.
             var scroll = _scanlineScrollCaptured[y]
                         ? _scanlineScrolls[y]
-                        : (X: ScrollX, Y: ScrollY);
+                        : (X: ScrollX, Y: ScrollY, Register.PPUCTRL);
+
             int scrolledX = x + scroll.X;
             int scrolledY = y + scroll.Y;
 
@@ -412,35 +467,7 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetNametableTileNumber(int x, int y)
         {
-            // PPUCTRL bit 0 and 1 select which nametable starts at top left
-            /*
-             *  Bits 1–0	Starting nametable
-                00	        $2000
-                01	        $2400
-                10	        $2800
-                11	        $2C00
-            */
-
-            int baseTable = Register.PPUCTRL & 0x03;
-
-            // Convert table number 0–3 into a row and column.
-            // The four nametables represent a 2x2 grid, so we can use modulo and division to get the row and column.
-            int baseTableColumn = baseTable % 2;
-            int baseTableRow = baseTable / 2;
-
-            // are we in left or right nametable of that row
-            int nametableOffsetX = x / 256;
-
-            // are we in top or bottom nametable of that column
-            int nametableOffsetY = y / 240;
-
-            // Move to the table on the right when offset is 1 (with wrap around)
-            int selectedTableColumn = (baseTableColumn + nametableOffsetX) % 2;
-            
-            // Move to the table downwards if offset is 1 (with wrap around)
-            int selectedTableRow = (baseTableRow + nametableOffsetY) % 2;
-
-            int selectedTable = selectedTableRow * 2 + selectedTableColumn;
+            int selectedTable = GetNametableIdx(x, y);
             int baseAddr = selectedTable * 0x400;
 
             // where in the actual nametable are we? 0-255, 0-239 since each nametable is 256x240px
@@ -454,7 +481,41 @@ namespace FamiMan.Core
             int tileRow = localY / 8;
 
             // nametable is a grid containing 32 tile numbers per row
-            return ReadPpuMemory((ushort) (NAMETABLE_START + baseAddr + (tileRow * 32) + tileColumn));
+            return ReadPpuMemory((ushort)(NAMETABLE_START + baseAddr + (tileRow * 32) + tileColumn));
+        }
+
+        private int GetNametableIdx(int x, int y)
+        {
+            // PPUCTRL bit 0 and 1 select which nametable starts at top left
+            /*
+             *  Bits 1–0	Starting nametable
+                00	        $2000
+                01	        $2400
+                10	        $2800
+                11	        $2C00
+            */
+
+            int baseTable = _bgNametableAtScanline[y];
+            
+            // Convert table number 0–3 into a row and column.
+            // The four nametables represent a 2x2 grid, so we can use modulo and division to get the row and column.
+            int baseTableColumn = baseTable % 2;
+            int baseTableRow = baseTable / 2;
+
+            // are we in left or right nametable of that row
+            int nametableOffsetX = x / 256;
+
+            // are we in top or bottom nametable of that column
+            int nametableOffsetY = y / 240;
+
+            // Move to the table on the right when offset is 1 (with wrap around)
+            int selectedTableColumn = (baseTableColumn + nametableOffsetX) % 2;
+
+            // Move to the table downwards if offset is 1 (with wrap around)
+            int selectedTableRow = (baseTableRow + nametableOffsetY) % 2;
+
+            int selectedTable = selectedTableRow * 2 + selectedTableColumn;
+            return selectedTable;
         }
 
         /// <summary>
@@ -498,14 +559,16 @@ namespace FamiMan.Core
         /// </summary>
         public byte GetBackgroundPaletteNumber(int x, int y)
         {
+            var currentNametableIdx = GetNametableIdx(x, y);
+            var (localX, localY) = (x % 256, y % 240);
             // each attribute background tile is 32x32px
             // divided into four 16x16px quadrants
             // each row of tiles in attr table is 8 tiles
-            int attributeColumn = x / 32;
-            int attributeRow = y / 32;
+            int attributeColumn = localX / 32;
+            int attributeRow = localY / 32;
 
             ushort attributeAddress =
-                (ushort)(0x23C0 + attributeRow * 8 + attributeColumn);
+                (ushort)(0x23C0 + (currentNametableIdx * 0x400) + attributeRow * 8 + attributeColumn);
 
             // get the 32x32px attribute byte and select the correct quadrant
             int attributeValue = ReadPpuMemory(attributeAddress);
@@ -617,7 +680,8 @@ namespace FamiMan.Core
 
             if (Scanline is >= 0 and < 240 && Cycle == 1)
             {
-                _scanlineScrolls[Scanline] = (ScrollX, ScrollY);
+                _bgNametableAtScanline[Scanline] = _backgroundNametable;
+                _scanlineScrolls[Scanline] = (ScrollX, ScrollY, Register.Registers[PPURegister.PPUCTRL_IDX]);
                 _scanlineScrollCaptured[Scanline] = true;
             }
 

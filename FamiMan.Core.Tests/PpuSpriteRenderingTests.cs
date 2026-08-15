@@ -181,6 +181,37 @@ public class PpuSpriteRenderingTests
             bus.Ppu.Register.Registers[PPURegister.PPUSTATUS_IDX] & 0x40);
     }
 
+    [Fact]
+    public void SpriteZeroHitUsesHorizontallyScrolledBackgroundPosition()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x1E);
+
+        // Sprite 0 is on tile row 1 (screen Y=8). Column 0 stays transparent;
+        // column 1 selects background tile 1, whose top-left pixel is opaque.
+        // $2021 = $2000 + (tile row 1 * 32) + tile column 1.
+        bus.Ppu.WritePpuMemory(0x2021, 0x01);
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+
+        // Sprite 0 has an opaque top-left pixel at screen position (0, 8).
+        bus.Ppu.WritePpuMemory(0x0020, 0b1000_0000);
+        SetSprite(bus.Ppu, spriteIndex: 0, x: 0, y: 8, tile: 2, attributes: 0);
+
+        // Scrolling eight pixels makes nametable column 1 appear at screen
+        // X=0. Sprite-zero detection must use that same scrolled position when
+        // deciding whether the background underneath sprite 0 is opaque.
+        bus.Ppu.WriteCpuRegister(Ppu.PPUSCROLL_ADDR, 8);
+        bus.Ppu.WriteCpuRegister(Ppu.PPUSCROLL_ADDR, 0);
+
+        // Visible cycle 1 is screen X=0, so reach pixel (0, 8).
+        for (int i = 0; i < 8 * 341 + 1; i++)
+            bus.Ppu.Tick();
+
+        Assert.NotEqual(
+            0,
+            bus.Ppu.Register.Registers[PPURegister.PPUSTATUS_IDX] & 0x40);
+    }
+
     private static void SetSprite(
         Ppu ppu,
         int spriteIndex,
