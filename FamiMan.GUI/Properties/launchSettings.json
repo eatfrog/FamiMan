@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "FamiMan.GUI": {
+      "commandName": "Project",
+      "commandLineArgs": "C:\\\\Code\\\\FamiMan\\\\smb.nes"
+    }
+  }
+}

@@ -45,6 +45,7 @@ namespace FamiMan.Core
         private Opcode _currentOpcode;
         private bool _servicingInterrupt;
         private ushort _activeVector;
+        private int _stallCyclesRemaining;
 
         private bool NmiPending { get; set; }
         private bool IrqPending { get; set; }
@@ -72,6 +73,10 @@ namespace FamiMan.Core
             // $fffc-$fffd	Start of reset handler
             PC = (ushort)(_bus.Read(0xfffc) + (_bus.Read(0xfffd) << 8));
         }
+        public void StallForCycles(int cycles)
+        {
+            _stallCyclesRemaining += cycles;
+        }
 
         public Instruction CurrentInstruction
         {
@@ -81,6 +86,12 @@ namespace FamiMan.Core
         public void Tick()
         {
             _ticks++;
+
+            if (_stallCyclesRemaining > 0)
+            {
+                _stallCyclesRemaining--;
+                return;
+            }
 
             if (_servicingInterrupt)
             {

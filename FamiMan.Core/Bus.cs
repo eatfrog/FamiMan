@@ -119,6 +119,7 @@ namespace FamiMan.Core
 
                     Ppu.SetOamByte(destination, data);
                 }
+                Cpu.StallForCycles(513); // 513 or 514 cycles depending on odd/even CPU cycle
                 return;
             }
             else if (address == 0x4016)

@@ -47,6 +47,28 @@ public class PpuSpriteRenderingTests
     }
 
     [Fact]
+    public void LowerOamIndexWinsWhenSpritesOverlap()
+    {
+        var bus = CreateBusWithChr();
+        bus.Ppu.WriteCpuRegister(Ppu.PPUMASK_ADDR, 0x10); // Show sprites.
+
+        // Tile 1 produces color index 1; tile 2 produces color index 2.
+        bus.Ppu.WritePpuMemory(0x0010, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x0028, 0b1000_0000);
+        bus.Ppu.WritePpuMemory(0x3F11, 0x21);
+        bus.Ppu.WritePpuMemory(0x3F12, 0x16);
+
+        // Both sprites cover the same pixel. The NES gives the lower OAM
+        // index priority, so sprite 0 must remain visible over sprite 1.
+        SetSprite(bus.Ppu, spriteIndex: 0, x: 20, y: 10, tile: 1, attributes: 0);
+        SetSprite(bus.Ppu, spriteIndex: 1, x: 20, y: 10, tile: 2, attributes: 0);
+
+        byte[] frame = bus.Ppu.RenderFrame();
+
+        Assert.Equal(0x21, frame[10 * 256 + 20]);
+    }
+
+    [Fact]
     public void SpriteAttributeBitsZeroAndOneSelectSpritePalette()
     {
         var bus = CreateBusWithChr();

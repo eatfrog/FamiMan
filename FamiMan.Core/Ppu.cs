@@ -72,6 +72,9 @@ namespace FamiMan.Core
         public byte ScrollX { get; private set; }
         public byte ScrollY { get; private set; }
 
+        private (byte X, byte Y)[] _scanlineScrolls = new (byte X, byte Y)[240];
+        private bool[] _scanlineScrollCaptured = new bool[240];
+
         /// <summary>
         /// Initializes one byte of sprite OAM independently of the CPU-visible
         /// OAM registers. Intended for focused sprite tests and debugging.
@@ -305,8 +308,11 @@ namespace FamiMan.Core
 
             // Palette attributes use the same scrolled background coordinate
             // as the tile/pattern lookup.
-            int scrolledX = x + ScrollX;
-            int scrolledY = y + ScrollY;
+            var scroll = _scanlineScrollCaptured[y]
+                        ? _scanlineScrolls[y]
+                        : (X: ScrollX, Y: ScrollY);
+            int scrolledX = x + scroll.X;
+            int scrolledY = y + scroll.Y;
             byte palette = GetBackgroundPaletteNumber(scrolledX, scrolledY);
 
             return GetBackgroundPaletteValue(palette, colorIndex);
@@ -388,8 +394,11 @@ namespace FamiMan.Core
         {
             // Screen coordinates and background coordinates differ when the
             // CPU has written a scroll position through PPUSCROLL.
-            int scrolledX = x + ScrollX;
-            int scrolledY = y + ScrollY;
+            var scroll = _scanlineScrollCaptured[y]
+                        ? _scanlineScrolls[y]
+                        : (X: ScrollX, Y: ScrollY);
+            int scrolledX = x + scroll.X;
+            int scrolledY = y + scroll.Y;
 
             byte tileNumber = GetNametableTileNumber(scrolledX, scrolledY);
             int tileX = scrolledX % 8;
@@ -558,14 +567,18 @@ namespace FamiMan.Core
             {
                 for (int x = 0; x < 256; x++)
                 {
-                    for (int spriteidx = 0; spriteidx < 64; spriteidx++)
+                    bool found = false;
+                    for (int spriteidx = 0; spriteidx < 64 && !found; spriteidx++)
                     {
                         // Get color idx for any sprites on this coordinate
                         sprites[y * 256 + x] = GetSpritePixelColorIndex(spriteidx, x, y);
                         if (sprites[y * 256 + x] != 0) // sprite pixel is not transparent
                         {
                             // Get the color value for the sprite pixel and overwrite the background pixel
-                            ret[y * 256 + x] = GetSpritePaletteValue(0, sprites[y * 256 + x]);
+                            byte attrs = ReadOamByte((byte)((spriteidx * 4) + 2));
+                            var paletteNumber = (byte)(attrs & 0x03);
+                            ret[y * 256 + x] = GetSpritePaletteValue(paletteNumber, sprites[y * 256 + x]);
+                            found = true;
                         }
                     }
                 }
@@ -594,12 +607,20 @@ namespace FamiMan.Core
             {
                 Cycle = 0;
                 Scanline++;
+
                 if (Scanline > 261)
                 {
                     Scanline = 0;
                     FrameComplete = true;
                 }
             }
+
+            if (Scanline is >= 0 and < 240 && Cycle == 1)
+            {
+                _scanlineScrolls[Scanline] = (ScrollX, ScrollY);
+                _scanlineScrollCaptured[Scanline] = true;
+            }
+
             byte mask = Register.Registers[PPURegister.PPUMASK_IDX];
 
             bool backgroundEnabled = (mask & 0x08) != 0;

@@ -6,6 +6,7 @@ internal class Program
 {
     private const int NesWidth = 256;
     private const int NesHeight = 240;
+    private const int MaximumCpuClocksPerFrame = 100_000;
 
     private static void Main(string[] args)
     {
@@ -18,11 +19,23 @@ internal class Program
         var debugOverlay = new DebugOverlay();
         uint[] framebuffer = new uint[NesWidth * NesHeight];
         bool quit = false;
+        bool emulationHalted = false;
 
         while (!quit)
         {
-            RunUntilNextFrame(bus);
-            CopyFrameToArgb(bus.Ppu, framebuffer);
+            if (!emulationHalted)
+            {
+                try
+                {
+                    RunUntilNextFrame(bus);
+                    CopyFrameToArgb(bus.Ppu, framebuffer);
+                }
+                catch (Exception exception)
+                {
+                    emulationHalted = true;
+                    debugOverlay.ShowFailure(exception, bus, cpu);
+                }
+            }
 
             window.Clear(Color.Black);
 
@@ -78,9 +91,19 @@ internal class Program
 
     private static void RunUntilNextFrame(Bus bus)
     {
+        int clocks = 0;
+
         do
         {
             bus.Clock();
+
+            clocks++;
+            if (clocks > MaximumCpuClocksPerFrame)
+            {
+                throw new InvalidOperationException(
+                    $"The PPU did not complete a frame after {MaximumCpuClocksPerFrame:N0} CPU clocks. " +
+                    $"Current PPU position is scanline {bus.Ppu.Scanline}, cycle {bus.Ppu.Cycle}.");
+            }
         }
         while (!bus.Ppu.ConsumeFrameComplete());
     }
