@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FamiMan.Core.Exceptions;
+using System;
 using System.Net;
 using System.Reflection.Emit;
 

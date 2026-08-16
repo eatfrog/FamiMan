@@ -26,6 +26,7 @@ namespace FamiMan.Core
             Ppu.Tick();
             Ppu.Tick();
             Ppu.Tick();
+            Apu.Tick();
         }
 
         public void Reset()
@@ -67,8 +68,10 @@ namespace FamiMan.Core
 
                 return Ppu.ReadCpuRegister(registerAddress);
             }
-
-            // APU, controller, DMA...
+            else if (address <= 0x4013 || address == 0x4015 || address == 0x4017)
+            {
+                return Apu.ReadStatus();
+            }
             else if (address == 0x4016)
             {
                 return Controller1.Read();
@@ -120,6 +123,16 @@ namespace FamiMan.Core
                     Ppu.SetOamByte(destination, data);
                 }
                 Cpu.StallForCycles(513); // 513 or 514 cycles depending on odd/even CPU cycle
+                return;
+            }
+            else if (address == 0x4000)
+            {
+                Apu.WriteRegister(address, value);
+                return;
+            }
+            else if (address <= 0x4013 || address == 0x4015 || address == 0x4017)
+            {
+                Apu.WriteRegister(address, value);
                 return;
             }
             else if (address == 0x4016)

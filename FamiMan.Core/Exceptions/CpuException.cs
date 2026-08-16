@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace FamiMan.Core
+namespace FamiMan.Core.Exceptions
 {
     public class CpuException : Exception
     {
